@@ -1,10 +1,11 @@
 // src/main.ts
 import { app, BrowserWindow, Menu, ipcMain } from 'electron';
-import { Systeminformation } from 'systeminformation';
+import electronSquirrelStartup from 'electron-squirrel-startup';
+import type { Systeminformation } from 'systeminformation';
 import path from 'path';
 import Store from 'electron-store';
 import si from 'systeminformation';
-import { spawn, ChildProcess } from 'child_process';
+import { exec, spawn, ChildProcess } from 'child_process';
 import fs from 'fs';
 import axios from 'axios';
 import { createMqttManager, MqttManager } from './services/mqttManager';
@@ -65,9 +66,7 @@ loadInitialSettings();
 let mainWindow: BrowserWindow | null = null;
 let webSocketManager: WebSocketManager | null = null;
 let mqttManager: MqttManager | null = null;
-let reconnectAttempts = 0;
-let lastMessageTime = Date.now();
-let scanTime: number | null = null;
+const lastMessageTime = Date.now();
 let bridgeProcess: ChildProcess | null = null;
 let bridgeRestartAttempts = 0;
 const MAX_BRIDGE_RESTARTS = 5;
@@ -190,7 +189,7 @@ const restartBridgeScript = () => {
 const handleSquirrelEvent = () => {
   if (process.platform === 'win32') {
     try {
-      return require('electron-squirrel-startup');
+      return electronSquirrelStartup;
     } catch (e) {
       console.log('electron-squirrel-startup is not required on this platform');
       return false;
@@ -394,7 +393,6 @@ async function getRouteToServer(serverIP: string): Promise<string | null> {
     if (process.platform === 'win32') {
       // Windows: PowerShellでルートを取得し、対応するMACアドレスを直接取得
       return new Promise((resolve) => {
-        const { exec } = require('child_process');
         // Find-NetRouteでインターフェースインデックスを取得し、Get-NetAdapterでMACアドレスを取得
         const psCommand = `powershell -Command "try { $route = Find-NetRoute -RemoteIPAddress '${serverIP}' -ErrorAction Stop; $adapter = Get-NetAdapter -InterfaceIndex $route.InterfaceIndex -ErrorAction Stop; Write-Output $adapter.MacAddress } catch { Write-Output 'ERROR' }"`;
 
@@ -423,7 +421,6 @@ async function getRouteToServer(serverIP: string): Promise<string | null> {
     } else if (process.platform === 'linux') {
       // Linux: ip addrコマンドでサーバーへのルートに使用されるインターフェースのMACアドレスを取得
       return new Promise((resolve) => {
-        const { exec } = require('child_process');
         // まずip route getでインターフェース名を取得
         exec(`ip route get ${serverIP}`, (error: any, stdout: string) => {
           if (error) {
@@ -466,7 +463,6 @@ async function getRouteToServer(serverIP: string): Promise<string | null> {
     } else if (process.platform === 'darwin') {
       // macOS: route getでインターフェース名を取得し、ifconfigでMACアドレスを取得
       return new Promise((resolve) => {
-        const { exec } = require('child_process');
         exec(`route -n get ${serverIP}`, (error: any, stdout: string) => {
           if (error) {
             console.error('macOSルート取得エラー:', error);
@@ -539,8 +535,6 @@ function subnetMaskToCidr(subnetMask: string): number {
 
 // ネットワークアダプタ一覧を取得する関数
 async function getNetworkAdapters(): Promise<any[]> {
-  const { exec } = require('child_process');
-
   if (process.platform === 'linux') {
     // Linux: nmcli を使用してネットワークデバイス一覧を取得（すべてのアダプタ）
     return new Promise((resolve) => {
@@ -732,8 +726,6 @@ async function getNetworkAdapters(): Promise<any[]> {
 
 // ネットワーク設定を適用する関数
 async function applyNetworkSettings(settings: any): Promise<{ success: boolean; message: string }> {
-  const { exec } = require('child_process');
-
   console.log('ネットワーク設定を適用中:', settings);
 
   if (process.platform === 'linux') {
@@ -785,7 +777,7 @@ async function applyNetworkSettings(settings: any): Promise<{ success: boolean; 
     return new Promise((resolve) => {
       if (settings.type === 'wireless' && settings.ssid) {
         // WiFi接続
-        let command = `netsh wlan connect name="${settings.ssid}"`;
+        const command = `netsh wlan connect name="${settings.ssid}"`;
 
         exec(command, (error: any, stdout: string) => {
           if (error) {
@@ -813,8 +805,6 @@ async function applyNetworkSettings(settings: any): Promise<{ success: boolean; 
 
 // Linux IP設定適用のヘルパー関数
 async function applyLinuxIPSettings(settings: any): Promise<{ success: boolean; message: string }> {
-  const { exec } = require('child_process');
-
   return new Promise((resolve) => {
     // まず、デバイスの実際の接続名を取得
     exec(`sudo nmcli -t -f GENERAL.CONNECTION device show ${settings.adapterName} | grep '^GENERAL.CONNECTION:'`, (connNameErr: any, connNameOut: string) => {
@@ -875,8 +865,6 @@ async function applyLinuxIPSettings(settings: any): Promise<{ success: boolean; 
 
 // Windows IP設定適用のヘルパー関数
 async function applyWindowsIPSettings(settings: any): Promise<{ success: boolean; message: string }> {
-  const { exec } = require('child_process');
-
   return new Promise((resolve) => {
     if (settings.useDHCP) {
       // DHCP設定

@@ -1,5 +1,5 @@
 // src/services/mqttManager.ts
-import * as mqtt from 'mqtt';
+import mqtt, { MqttClient } from 'mqtt';
 import { BrowserWindow } from 'electron';
 import Store from 'electron-store';
 import { WebSocketMessage } from '../types';
@@ -7,12 +7,12 @@ import { WebSocketMessage } from '../types';
 const store = new Store();
 
 export class MqttManager {
-  private client: mqtt.MqttClient | null = null;
+  private client: MqttClient | null = null;
   private reconnectAttempts = 0;
   private readonly RECONNECT_INTERVAL = 3000;
   private readonly CONNECT_TIMEOUT = 10000;
   private macAddress: string;
-  private brokerUrl: string = '';
+  private brokerUrl = '';
   private reconnectTimer: NodeJS.Timeout | null = null;
   private connectTimeoutTimer: NodeJS.Timeout | null = null;
 

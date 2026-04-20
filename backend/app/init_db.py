@@ -2,8 +2,13 @@
 """
 データベースの初期化とシードデータの投入を行うスクリプト
 """
+from pathlib import Path
+
+from alembic import command
+from alembic.config import Config
+from sqlalchemy import text
 from sqlalchemy.orm import Session
-from app.database import engine, Base
+from app.database import engine, Base, SQLALCHEMY_DATABASE_URL
 # 全モデルをインポートしてBase.metadataに登録
 from app import models
 from app.models import (
@@ -17,10 +22,15 @@ from app.models import (
 )
 
 
+BASE_DIR = Path(__file__).resolve().parents[1]
+
+
 def drop_all_tables():
     """全テーブルを削除"""
     print("全テーブルを削除中...")
     Base.metadata.drop_all(bind=engine)
+    with engine.begin() as connection:
+        connection.execute(text("DROP TABLE IF EXISTS alembic_version"))
     print("削除完了")
 
 
@@ -156,12 +166,6 @@ def seed_code_length_rules(session: Session):
     
     rules = [
         CodeLengthRule(
-            min_length=6,
-            max_length=6,
-            code_type=CodeType.UserID,
-            check_digit=True
-        ),
-        CodeLengthRule(
             min_length=10,
             max_length=15,
             code_type=CodeType.ProductNumber,
@@ -172,6 +176,15 @@ def seed_code_length_rules(session: Session):
     session.add_all(rules)
     session.commit()
     print(f"コード長ルール投入完了: {len(rules)}件")
+
+
+def stamp_alembic_head():
+    """新規作成したDBを Alembic head として記録する。"""
+    alembic_config = Config(str(BASE_DIR / "alembic.ini"))
+    alembic_config.set_main_option("script_location", str(BASE_DIR / "alembic"))
+    alembic_config.set_main_option("sqlalchemy.url", SQLALCHEMY_DATABASE_URL.replace("%", "%%"))
+    command.stamp(alembic_config, "head")
+    print("Alembic revision を head に設定しました")
 
 
 def init_db(drop_existing: bool = False):
@@ -194,6 +207,7 @@ def init_db(drop_existing: bool = False):
         seed_classification_data(session)
         seed_plc_data(session)
         seed_code_length_rules(session)
+        stamp_alembic_head()
         print("\n✓ データベースの初期化が完了しました")
     except Exception as e:
         session.rollback()

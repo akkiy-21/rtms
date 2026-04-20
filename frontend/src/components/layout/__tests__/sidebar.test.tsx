@@ -29,7 +29,6 @@ describe('Sidebar', () => {
     expect(screen.getByText(NAVIGATION_LABELS.CUSTOMERS)).toBeInTheDocument();
     expect(screen.getByText(NAVIGATION_LABELS.PRODUCTS)).toBeInTheDocument();
     expect(screen.getByText(NAVIGATION_LABELS.USERS)).toBeInTheDocument();
-    expect(screen.getByText(NAVIGATION_LABELS.GROUPS)).toBeInTheDocument();
     expect(screen.getByText(NAVIGATION_LABELS.DATA_DOWNLOAD)).toBeInTheDocument();
   });
 
@@ -49,7 +48,6 @@ describe('Sidebar', () => {
     expect(screen.queryByText('Customers')).not.toBeInTheDocument();
     expect(screen.queryByText('Products')).not.toBeInTheDocument();
     expect(screen.queryByText('Users')).not.toBeInTheDocument();
-    expect(screen.queryByText('Groups')).not.toBeInTheDocument();
     expect(screen.queryByText('Data Download')).not.toBeInTheDocument();
     expect(screen.queryByText('Navigation')).not.toBeInTheDocument();
   });
@@ -69,7 +67,6 @@ describe('Sidebar', () => {
     expect(screen.getByRole('link', { name: NAVIGATION_LABELS.CUSTOMERS })).toHaveAttribute('href', '/customers');
     expect(screen.getByRole('link', { name: NAVIGATION_LABELS.PRODUCTS })).toHaveAttribute('href', '/products');
     expect(screen.getByRole('link', { name: NAVIGATION_LABELS.USERS })).toHaveAttribute('href', '/users');
-    expect(screen.getByRole('link', { name: NAVIGATION_LABELS.GROUPS })).toHaveAttribute('href', '/groups');
     expect(screen.getByRole('link', { name: NAVIGATION_LABELS.DATA_DOWNLOAD })).toHaveAttribute('href', '/data-download');
   });
 });

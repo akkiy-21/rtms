@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 /**
  * Hides the mouse cursor after a period of inactivity and brings it back on interaction.
  */
-export const useCursorVisibility = (timeoutMs: number = 5000) => {
+export const useCursorVisibility = (timeoutMs = 5000) => {
   const [isCursorVisible, setIsCursorVisible] = useState(true);
   const cursorTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 

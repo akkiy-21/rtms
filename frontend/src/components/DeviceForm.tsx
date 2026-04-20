@@ -5,6 +5,7 @@ import React, { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { deviceFormSchema, DeviceFormData } from './features/devices/device-form-schema';
+import { Eye, EyeOff } from 'lucide-react';
 import {
   Form,
   FormControl,
@@ -14,6 +15,7 @@ import {
   FormMessage,
 } from './ui/form';
 import { Input } from './ui/input';
+import { Button } from './ui/button';
 import { DEVICE_LABELS } from '../localization/constants/device-labels';
 import { TECHNICAL_TERMS } from '../localization/constants/technical-terms';
 
@@ -24,14 +26,16 @@ interface DeviceFormProps {
 }
 
 const DeviceForm: React.FC<DeviceFormProps> = ({ initialData, onSubmit, children }) => {
+  const [showSshPassword, setShowSshPassword] = React.useState(false);
+
   const form = useForm<DeviceFormData>({
     resolver: zodResolver(deviceFormSchema),
     defaultValues: {
       mac_address: '',
       name: '',
+      ssh_username: '',
+      ssh_password: '',
       standard_cycle_time: undefined,
-      planned_production_quantity: undefined,
-      planned_production_time: undefined,
       ...initialData,
     },
   });
@@ -42,9 +46,9 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ initialData, onSubmit, children
       form.reset({
         mac_address: '',
         name: '',
+        ssh_username: '',
+        ssh_password: '',
         standard_cycle_time: undefined,
-        planned_production_quantity: undefined,
-        planned_production_time: undefined,
         ...initialData,
       });
     }
@@ -110,20 +114,14 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ initialData, onSubmit, children
 
         <FormField
           control={form.control}
-          name="planned_production_quantity"
+          name="ssh_username"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>{DEVICE_LABELS.FIELDS.PLANNED_PRODUCTION_QUANTITY}（オプション）</FormLabel>
+              <FormLabel>{DEVICE_LABELS.FIELDS.SSH_USERNAME}（オプション）</FormLabel>
               <FormControl>
                 <Input
-                  type="number"
-                  placeholder={DEVICE_LABELS.PLACEHOLDERS.PLANNED_PRODUCTION_QUANTITY}
+                  placeholder={DEVICE_LABELS.PLACEHOLDERS.SSH_USERNAME}
                   {...field}
-                  value={field.value ?? ''}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    field.onChange(value === '' ? undefined : parseInt(value, 10));
-                  }}
                 />
               </FormControl>
               <FormMessage />
@@ -133,21 +131,27 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ initialData, onSubmit, children
 
         <FormField
           control={form.control}
-          name="planned_production_time"
+          name="ssh_password"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>{DEVICE_LABELS.FIELDS.PLANNED_PRODUCTION_TIME}（オプション）</FormLabel>
+              <FormLabel>{DEVICE_LABELS.FIELDS.SSH_PASSWORD}（オプション）</FormLabel>
               <FormControl>
-                <Input
-                  type="number"
-                  placeholder={DEVICE_LABELS.PLACEHOLDERS.PLANNED_PRODUCTION_TIME}
-                  {...field}
-                  value={field.value ?? ''}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    field.onChange(value === '' ? undefined : parseFloat(value));
-                  }}
-                />
+                <div className="flex items-center gap-2">
+                  <Input
+                    type={showSshPassword ? 'text' : 'password'}
+                    placeholder={DEVICE_LABELS.PLACEHOLDERS.SSH_PASSWORD}
+                    {...field}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setShowSshPassword((prev) => !prev)}
+                    aria-label={showSshPassword ? DEVICE_LABELS.ACTIONS.HIDE_PASSWORD : DEVICE_LABELS.ACTIONS.SHOW_PASSWORD}
+                  >
+                    {showSshPassword ? <EyeOff /> : <Eye />}
+                  </Button>
+                </div>
               </FormControl>
               <FormMessage />
             </FormItem>

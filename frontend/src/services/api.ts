@@ -7,7 +7,6 @@ import { TimeTable, TimeTableRequest } from '../types/timeTable';
 import { Customer, CustomerFormData } from '../types/customer';
 import { Product, ProductFormData, ProductWithCustomer } from '../types/product';
 import { User, UserFormData } from '../types/user';
-import { Group, GroupFormData } from '../types/group';
 import { Client, ClientFormData } from '../types/client';
 import { EfficiencyAddress } from '../types/efficiency';
 import { EfficiencyAddressFormData } from '../components/features/efficiency/efficiency-address-form-schema';
@@ -198,46 +197,6 @@ export const updateUser = async (id: string, userData: UserFormData): Promise<Us
 
 export const deleteUser = async (id: string): Promise<void> => {  // number から string に変更
   await axios.delete(`${API_BASE_URL}/users/${id}`);
-};
-
-// Groups
-export const getGroups = async (): Promise<Group[]> => {
-  const response = await axios.get(`${API_BASE_URL}/groups`);
-  return response.data;
-};
-
-export const getGroup = async (id: number): Promise<Group> => {
-  const response = await axios.get(`${API_BASE_URL}/groups/${id}`);
-  return response.data;
-};
-
-export const createGroup = async (groupData: GroupFormData): Promise<Group> => {
-  const response = await axios.post(`${API_BASE_URL}/groups`, groupData);
-  return response.data;
-};
-
-export const updateGroup = async (id: number, groupData: GroupFormData): Promise<Group> => {
-  const response = await axios.put(`${API_BASE_URL}/groups/${id}`, groupData);
-  return response.data;
-};
-
-export const deleteGroup = async (id: number): Promise<void> => {
-  await axios.delete(`${API_BASE_URL}/groups/${id}`);
-};
-
-export const addUserToGroup = async (groupId: number, userId: string): Promise<Group> => {
-  const response = await axios.post(`${API_BASE_URL}/groups/${groupId}/users/${userId}`);
-  return response.data;
-};
-
-export const removeUserFromGroup = async (groupId: number, userId: string): Promise<Group> => {
-  const response = await axios.delete(`${API_BASE_URL}/groups/${groupId}/users/${userId}`);
-  return response.data;
-};
-
-export const getUsersInGroup = async (groupId: number): Promise<User[]> => {
-  const response = await axios.get(`${API_BASE_URL}/groups/${groupId}/users`);
-  return response.data;
 };
 
 // clients

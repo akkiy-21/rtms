@@ -1,7 +1,7 @@
 // DevicesPage.tsx
 // デバイス一覧ページ - shadcn/ui版
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PageHeader } from '@/components/layout/page-header';
 import { DataTable } from '@/components/common/data-table';
@@ -27,11 +27,7 @@ const DevicesPage: React.FC = () => {
   const navigate = useNavigate();
   const { handleError } = useApiError();
 
-  useEffect(() => {
-    fetchDevices();
-  }, []);
-
-  const fetchDevices = async () => {
+  const fetchDevices = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -44,7 +40,29 @@ const DevicesPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [handleError]);
+
+  useEffect(() => {
+    fetchDevices();
+
+    const handleWindowFocus = () => {
+      fetchDevices();
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        fetchDevices();
+      }
+    };
+
+    window.addEventListener('focus', handleWindowFocus);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener('focus', handleWindowFocus);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    }
+  }, [fetchDevices]);
 
   const handleEditClick = (id: number) => {
     navigate(`/devices/${id}/edit`);

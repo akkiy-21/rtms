@@ -45,10 +45,6 @@ export function AppLayout({ children }: AppLayoutProps) {
       // Users関連
       '/users/create': '/users',
       '/users/edit': '/users',
-      // Groups関連
-      '/groups/create': '/groups',
-      '/groups/edit': '/groups',
-      '/groups/users': '/groups',
       // PLCs関連
       '/plcs/create': '/plcs',
       '/plcs/edit': '/plcs',
@@ -81,8 +77,6 @@ export function AppLayout({ children }: AppLayoutProps) {
     // 動的なIDを含むパスの処理
     const dynamicPatterns = [
       { pattern: /^\/users\/\d+\/edit$/, parent: '/users' },
-      { pattern: /^\/groups\/\d+\/edit$/, parent: '/groups' },
-      { pattern: /^\/groups\/\d+\/users$/, parent: '/groups' },
       { pattern: /^\/plcs\/\d+\/edit$/, parent: '/plcs' },
       { pattern: /^\/devices\/\d+\/edit$/, parent: '/devices' },
       { pattern: /^\/devices\/\d+\/detail-settings$/, parent: '/devices' },

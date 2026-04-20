@@ -97,18 +97,14 @@ const IOSettingsPage: React.FC = () => {
                   {device.standard_cycle_time ? `${device.standard_cycle_time}${SETTINGS_LABELS.SECONDS}` : SETTINGS_LABELS.NOT_SET}
                 </p>
               </div>
-              {device.planned_production_quantity && (
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">{SETTINGS_LABELS.PLANNED_PRODUCTION_QUANTITY}</p>
-                  <p className="text-sm">{device.planned_production_quantity}</p>
-                </div>
-              )}
-              {device.planned_production_time && (
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">{SETTINGS_LABELS.PLANNED_PRODUCTION_TIME}</p>
-                  <p className="text-sm">{device.planned_production_time}{SETTINGS_LABELS.MINUTES}</p>
-                </div>
-              )}
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">{SETTINGS_LABELS.SSH_LATEST_IP}</p>
+                <p className="text-sm">{device.last_known_ip_address || SETTINGS_LABELS.NOT_SET}</p>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">{SETTINGS_LABELS.SSH_USERNAME}</p>
+                <p className="text-sm">{device.ssh_username || SETTINGS_LABELS.NOT_SET}</p>
+              </div>
             </div>
           </CardContent>
         </Card>

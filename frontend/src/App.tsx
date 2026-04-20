@@ -26,10 +26,6 @@ import ProductEditPage from './pages/ProductEditPage';
 import UsersPage from './pages/UsersPage';
 import UserCreatePage from './pages/UserCreatePage';
 import UserEditPage from './pages/UserEditPage';
-import GroupsPage from './pages/GroupsPage';
-import GroupCreatePage from './pages/GroupCreatePage';
-import GroupEditPage from './pages/GroupEditPage';
-import GroupUsersPage from './pages/GroupUsersPage';
 import ClientSettingsPage from './pages/ClientSettingsPage';
 import ClientCreatePage from './pages/ClientCreatePage';
 import ClientEditPage from './pages/ClientEditPage';
@@ -103,10 +99,6 @@ const App: React.FC = () => {
           <Route path="/users" element={<UsersPage />} />
           <Route path="/users/create" element={<UserCreatePage />} />
           <Route path="/users/:id/edit" element={<UserEditPage />} />
-          <Route path="/groups" element={<GroupsPage />} />
-          <Route path="/groups/create" element={<GroupCreatePage />} />
-          <Route path="/groups/:id/edit" element={<GroupEditPage />} />
-          <Route path="/groups/:groupId/users" element={<GroupUsersPage />} />
           {/* Data関連のルート */}
           <Route path="/data-download" element={<DataDownloadPage />} />
         </Routes>

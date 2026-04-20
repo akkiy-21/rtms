@@ -16,17 +16,16 @@ export const deviceFormSchema = z.object({
   name: z.string()
     .min(1, VALIDATION_MESSAGES.REQUIRED(DEVICE_LABELS.FIELDS.DEVICE_NAME))
     .max(100, VALIDATION_MESSAGES.MAX_LENGTH(DEVICE_LABELS.FIELDS.DEVICE_NAME, 100)),
+  ssh_username: z.string()
+    .max(100, VALIDATION_MESSAGES.MAX_LENGTH(DEVICE_LABELS.FIELDS.SSH_USERNAME, 100))
+    .optional()
+    .or(z.literal('')),
+  ssh_password: z.string()
+    .max(255, VALIDATION_MESSAGES.MAX_LENGTH(DEVICE_LABELS.FIELDS.SSH_PASSWORD, 255))
+    .optional()
+    .or(z.literal('')),
   standard_cycle_time: z.number()
     .positive(VALIDATION_MESSAGES.MIN_VALUE(DEVICE_LABELS.FIELDS.STANDARD_CYCLE_TIME, 1))
-    .optional()
-    .or(z.literal(undefined)),
-  planned_production_quantity: z.number()
-    .int(VALIDATION_MESSAGES.INVALID_INTEGER())
-    .positive(VALIDATION_MESSAGES.MIN_VALUE(DEVICE_LABELS.FIELDS.PLANNED_PRODUCTION_QUANTITY, 1))
-    .optional()
-    .or(z.literal(undefined)),
-  planned_production_time: z.number()
-    .positive(VALIDATION_MESSAGES.MIN_VALUE(DEVICE_LABELS.FIELDS.PLANNED_PRODUCTION_TIME, 1))
     .optional()
     .or(z.literal(undefined)),
 });

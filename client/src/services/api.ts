@@ -1,6 +1,6 @@
 // services/api.ts
 import axios, { AxiosError } from 'axios';
-import { DeviceConfig, TimeTable, ActiveUser, DeviceInfo } from '../types';
+import { DeviceConfig, TimeTable, DeviceInfo, SelectedAdapter } from '../types';
 
 export class DeviceNotFoundError extends Error {
   constructor(message: string) {
@@ -38,7 +38,7 @@ export const findBestAdapter = async (
   adapters: any[],
   serverAddress: string,
   serverPort: string
-): Promise<string | null> => {
+): Promise<SelectedAdapter | null> => {
   if (!adapters || adapters.length === 0) {
     console.error('❌ ネットワークアダプターが見つかりません');
     return null;
@@ -92,7 +92,10 @@ export const findBestAdapter = async (
 
       if (matchedAdapter) {
         console.log(`🎯 ルーティングテーブルから選択されたアダプター: ${matchedAdapter.iface} (${matchedAdapter.mac})`);
-        return matchedAdapter.mac;
+        return {
+          macAddress: matchedAdapter.mac,
+          ipAddress: matchedAdapter.ip4 || null,
+        };
       } else {
         console.warn(`⚠️ ルーティングテーブルから取得したMACアドレス ${routeMacAddress} に一致するアダプターが見つかりませんでした`);
         console.log('🔍 利用可能なMACアドレス:', validAdapters.map(a => a.mac));
@@ -117,7 +120,35 @@ export const findBestAdapter = async (
 
   const bestAdapter = sortedAdapters[0];
   console.log(`🎯 フォールバックで選択されたアダプター: ${bestAdapter.iface} (${bestAdapter.mac})`);
-  return bestAdapter.mac;
+  return {
+    macAddress: bestAdapter.mac,
+    ipAddress: bestAdapter.ip4 || null,
+  };
+};
+
+export const updateDeviceRuntimeNetwork = async (
+  serverAddress: string,
+  serverPort: string,
+  deviceId: number,
+  lastKnownIpAddress: string
+): Promise<void> => {
+  const result = await window.electronAPI.httpRequest({
+    method: 'put',
+    url: `/devices/${deviceId}/runtime-network`,
+    baseURL: `http://${serverAddress}:${serverPort}`,
+    data: {
+      last_known_ip_address: lastKnownIpAddress,
+    },
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    timeout: 10000,
+  });
+
+  if ('error' in result) {
+    const error = result.error;
+    throw new ServerConnectionError(`Failed to update runtime network: ${error.message}`);
+  }
 };
 
 // get device config
@@ -182,54 +213,6 @@ export const getTimeTables = async (
     } else {
       throw new ServerConnectionError(`Failed to connect to server: ${error.message}`);
     }
-  }
-
-  return result.data;
-};
-
-// get latest active users
-export const getLatestActiveUsers = async (
-  serverAddress: string,
-  serverPort: string,
-  deviceId: number
-): Promise<ActiveUser[]> => {
-  const result = await window.electronAPI.httpRequest({
-    method: 'get',
-    url: `/data/${deviceId}/latest_active_users`,
-    baseURL: `http://${serverAddress}:${serverPort}`,
-    headers: {
-      'Content-Type': 'application/json',
-    },
-  });
-
-  if ('error' in result) {
-    console.error('Failed to fetch latest active users:', result.error);
-    throw new Error('Failed to fetch latest active users');
-  }
-
-  return result.data;
-};
-
-// process scan data
-export const processScanDataApi = async (
-  serverAddress: string,
-  serverPort: string,
-  deviceId: number,
-  scanData: string
-): Promise<{ category: string; user_id: string; user_name: string; state: boolean }> => {
-  const result = await window.electronAPI.httpRequest({
-    method: 'post',
-    url: '/scan',
-    baseURL: `http://${serverAddress}:${serverPort}`,
-    data: { device_id: deviceId, scan_data: scanData },
-    headers: {
-      'Content-Type': 'application/json',
-    },
-  });
-
-  if ('error' in result) {
-    console.error('Failed to process scan data:', result.error);
-    throw new Error('Failed to process scan data');
   }
 
   return result.data;

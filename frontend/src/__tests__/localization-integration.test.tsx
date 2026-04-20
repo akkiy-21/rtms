@@ -37,12 +37,10 @@ describe('全ページ翻訳統合テスト', () => {
       // 主要なナビゲーション項目が日本語で表示されることを確認
       expect(screen.getByText(NAVIGATION_LABELS.DEVICES)).toBeInTheDocument();
       expect(screen.getByText(NAVIGATION_LABELS.USERS)).toBeInTheDocument();
-      expect(screen.getByText(NAVIGATION_LABELS.GROUPS)).toBeInTheDocument();
 
       // 英語のメニュー項目が表示されないことを確認
       expect(screen.queryByText('Devices')).not.toBeInTheDocument();
       expect(screen.queryByText('Users')).not.toBeInTheDocument();
-      expect(screen.queryByText('Groups')).not.toBeInTheDocument();
     });
 
     it('パンくずリストが日本語で表示される', () => {
@@ -64,14 +62,12 @@ describe('全ページ翻訳統合テスト', () => {
     it('ナビゲーションラベルが定義されている', () => {
       expect(NAVIGATION_LABELS.DEVICES).toBeDefined();
       expect(NAVIGATION_LABELS.USERS).toBeDefined();
-      expect(NAVIGATION_LABELS.GROUPS).toBeDefined();
       expect(NAVIGATION_LABELS.HOME).toBeDefined();
       expect(NAVIGATION_LABELS.EDIT).toBeDefined();
       
       // 日本語であることを確認
       expect(NAVIGATION_LABELS.DEVICES).toMatch(/[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/);
       expect(NAVIGATION_LABELS.USERS).toMatch(/[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/);
-      expect(NAVIGATION_LABELS.GROUPS).toMatch(/[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/);
     });
 
     it('アクションラベルが定義されている', () => {
@@ -114,8 +110,7 @@ describe('全ページ翻訳統合テスト', () => {
       // 業務用語は日本語化されるべき
       const businessTerms = [
         NAVIGATION_LABELS.DEVICES,
-        NAVIGATION_LABELS.USERS,
-        NAVIGATION_LABELS.GROUPS
+        NAVIGATION_LABELS.USERS
       ];
       
       businessTerms.forEach(term => {

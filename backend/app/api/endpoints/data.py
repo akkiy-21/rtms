@@ -2,9 +2,7 @@
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
-from typing import List
 from ...database import get_db
-from ...schemas import UserMeasurementWithName
 from ...services import data_service, device_service
 from fastapi.responses import StreamingResponse
 from datetime import datetime
@@ -17,25 +15,6 @@ router = APIRouter(
     prefix="/data",
     tags=["data"]
 )
-
-# UserMeasurement関連のエンドポイント
-@router.get("/{device_id}/latest_active_users", response_model=List[UserMeasurementWithName])
-def get_latest_active_users(device_id: int, db: Session = Depends(get_db)):
-    active_users = data_service.get_latest_active_users_with_names(db, device_id)
-    if not active_users:
-        raise HTTPException(status_code=404, detail="No active users found for this device")
-    
-    # データベースの結果をPydanticモデルに変換
-    return [
-        UserMeasurementWithName(
-            device_id=measurement.device_id,
-            user_id=measurement.user_id,
-            user_name=user_name,
-            state=measurement.state,
-            event_time=measurement.event_time
-        )
-        for measurement, user_name in active_users
-    ]
 
 # 集計データのダウンロードエンドポイント
 @router.get("/{device_id}/aggregated_data")
@@ -77,7 +56,7 @@ def get_aggregated_data(
     # CSVをメモリ上に作成
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow(['time_shift', 'good_qty', 'ng_qty', 'active_user'])
+    writer.writerow(['time_shift', 'good_qty', 'ng_qty'])
     for row in csv_data:
         writer.writerow(row)
 

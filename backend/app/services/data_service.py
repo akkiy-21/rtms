@@ -71,14 +71,6 @@ def process_alarm_data(db: Session, device_id: int, data: dict, event_time: int)
                 }
                 data_crud.create_alarm_measurement_comment(db, alarm_comment)
 
-# ユーザーの最新の計測データを取得
-def get_latest_active_users(db: Session, device_id: int):
-    return data_crud.get_latest_active_users(db, device_id)
-
-def get_latest_active_users_with_names(db: Session, device_id: int):
-    return data_crud.get_latest_active_users_with_names(db, device_id)
-
-
 def get_aggregated_data(db: Session, device_id: int, target_date: date):
     # タイムゾーンの設定
     tz = pytz.timezone('Asia/Tokyo')
@@ -107,21 +99,13 @@ def get_aggregated_data(db: Session, device_id: int, target_date: date):
         good_qty = data_crud.get_quality_counts(db, device_id, 'Good', start_datetime, end_datetime)
         ng_qty = data_crud.get_quality_counts(db, device_id, 'Ng', start_datetime, end_datetime)
 
-        # アクティブなユーザーを取得
-        active_users = data_crud.get_active_users_with_names(db, device_id, start_datetime, end_datetime)
-
-        # ユーザーIDと名前を連結
-        active_user_list = [f"{user_id} ({user_name})" for user_id, user_name in active_users]
-        active_user_str = ", ".join(active_user_list) if active_user_list else ""
-
         # シフト時間の文字列を作成
         shift_time_str = f"{shift.start_time.strftime('%H:%M')}-{shift.end_time.strftime('%H:%M')}"
 
         results.append([
             shift_time_str,
             int(good_qty),
-            int(ng_qty),
-            active_user_str
+            int(ng_qty)
         ])
 
     return results

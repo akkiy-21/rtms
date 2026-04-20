@@ -1,13 +1,38 @@
 // device-columns.tsx
 // デバイス一覧テーブルのカラム定義
 
+import React from 'react';
 import { ColumnDef } from '@tanstack/react-table';
 import { Device } from '@/types/device';
 import { DataTableColumnHeader } from '@/components/common/data-table-column-header';
 import { ActionButtons } from '@/components/common/action-buttons';
-import { Settings } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Eye, EyeOff, Settings } from 'lucide-react';
 import { DEVICE_LABELS } from '@/localization/constants/device-labels';
 import { TECHNICAL_TERMS } from '@/localization/constants/technical-terms';
+
+const PasswordCell: React.FC<{ password: string | null }> = ({ password }) => {
+  const [visible, setVisible] = React.useState(false);
+
+  if (!password) {
+    return <span>-</span>;
+  }
+
+  return (
+    <div className="flex items-center gap-2">
+      <span>{visible ? password : '••••••••'}</span>
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        onClick={() => setVisible((prev) => !prev)}
+        aria-label={visible ? DEVICE_LABELS.ACTIONS.HIDE_PASSWORD : DEVICE_LABELS.ACTIONS.SHOW_PASSWORD}
+      >
+        {visible ? <EyeOff /> : <Eye />}
+      </Button>
+    </div>
+  );
+};
 
 export const createDeviceColumns = (
   onEdit: (id: number) => void,
@@ -28,32 +53,42 @@ export const createDeviceColumns = (
       ),
     },
     {
+      accessorKey: 'last_known_ip_address',
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title={DEVICE_LABELS.TABLE.HEADERS.LAST_KNOWN_IP_ADDRESS} />
+      ),
+      cell: ({ row }) => {
+        const value = row.getValue('last_known_ip_address') as string | null;
+        return value || '-';
+      },
+    },
+    {
+      accessorKey: 'ssh_username',
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title={DEVICE_LABELS.TABLE.HEADERS.SSH_USERNAME} />
+      ),
+      cell: ({ row }) => {
+        const value = row.getValue('ssh_username') as string | null;
+        return value || '-';
+      },
+    },
+    {
+      accessorKey: 'ssh_password',
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title={DEVICE_LABELS.TABLE.HEADERS.SSH_PASSWORD} />
+      ),
+      cell: ({ row }) => {
+        const value = row.getValue('ssh_password') as string | null;
+        return <PasswordCell password={value} />;
+      },
+    },
+    {
       accessorKey: 'standard_cycle_time',
       header: ({ column }) => (
         <DataTableColumnHeader column={column} title={DEVICE_LABELS.TABLE.HEADERS.STANDARD_CYCLE_TIME} />
       ),
       cell: ({ row }) => {
         const value = row.getValue('standard_cycle_time') as number | null;
-        return value !== null ? value : '-';
-      },
-    },
-    {
-      accessorKey: 'planned_production_quantity',
-      header: ({ column }) => (
-        <DataTableColumnHeader column={column} title={DEVICE_LABELS.TABLE.HEADERS.PLANNED_PRODUCTION_QUANTITY} />
-      ),
-      cell: ({ row }) => {
-        const value = row.getValue('planned_production_quantity') as number | null;
-        return value !== null ? value : '-';
-      },
-    },
-    {
-      accessorKey: 'planned_production_time',
-      header: ({ column }) => (
-        <DataTableColumnHeader column={column} title={DEVICE_LABELS.TABLE.HEADERS.PLANNED_PRODUCTION_TIME} />
-      ),
-      cell: ({ row }) => {
-        const value = row.getValue('planned_production_time') as number | null;
         return value !== null ? value : '-';
       },
     },

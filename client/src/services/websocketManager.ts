@@ -1,7 +1,7 @@
 // src/services/websocketManager.ts
 import WebSocket from 'ws';
 import { BrowserWindow } from 'electron';
-import { WebSocketMessage, EfficiencyData } from '../types';
+import { WebSocketMessage } from '../types';
 import { MqttManager } from './mqttManager';
 
 export class WebSocketManager {
@@ -20,7 +20,7 @@ export class WebSocketManager {
   private readonly MESSAGE_TIMEOUT = 5000;
   private readonly MAX_SCAN_TIME = 1000;
 
-  private isConfigConnected: boolean = false;
+  private isConfigConnected = false;
 
   constructor(private mainWindow: BrowserWindow | null, private mqttManager: MqttManager) {}
 

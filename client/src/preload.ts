@@ -66,24 +66,44 @@ contextBridge.exposeInMainWorld('electronAPI', {
   
   // Script関連
   onScriptReady: (callback: (ready: boolean) => void) => {
-    ipcRenderer.on('script-ready', (_, ready) => callback(ready));
+    const listener = (_event: Electron.IpcRendererEvent, ready: boolean) => callback(ready);
+    ipcRenderer.on('script-ready', listener);
+    return () => {
+      ipcRenderer.removeListener('script-ready', listener);
+    };
   },
   onBridgeRestartStarted: (callback: () => void) => {
-    ipcRenderer.on('bridge-restart-started', () => callback());
+    const listener = () => callback();
+    ipcRenderer.on('bridge-restart-started', listener);
+    return () => {
+      ipcRenderer.removeListener('bridge-restart-started', listener);
+    };
   },
   
   // WebSocket関連
   onWebSocketStatus: (callback: (status: boolean) => void) => {
-    ipcRenderer.on('websocket-status', (_, status) => callback(status));
+    const listener = (_event: Electron.IpcRendererEvent, status: boolean) => callback(status);
+    ipcRenderer.on('websocket-status', listener);
+    return () => {
+      ipcRenderer.removeListener('websocket-status', listener);
+    };
   },
   sendConfigWebSocket: (config: any) => ipcRenderer.invoke('send-config-websocket', config),
   
   // MQTT関連
   onMqttStatus: (callback: (status: string) => void) => {
-    ipcRenderer.on('mqtt-status', (_, status) => callback(status));
+    const listener = (_event: Electron.IpcRendererEvent, status: string) => callback(status);
+    ipcRenderer.on('mqtt-status', listener);
+    return () => {
+      ipcRenderer.removeListener('mqtt-status', listener);
+    };
   },
   onMqttMessage: (callback: (data: { topic: string, message: string }) => void) => {
-    ipcRenderer.on('mqtt-message', (_, data) => callback(data));
+    const listener = (_event: Electron.IpcRendererEvent, data: { topic: string, message: string }) => callback(data);
+    ipcRenderer.on('mqtt-message', listener);
+    return () => {
+      ipcRenderer.removeListener('mqtt-message', listener);
+    };
   },
   reconnectMqtt: () => ipcRenderer.invoke('reconnect-mqtt'),
   mqttPublish: (topic: string, message: string, qos: 0 | 1 | 2) => 

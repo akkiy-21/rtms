@@ -18,16 +18,25 @@ class TempIDResponse(BaseModel):
 class DeviceRegistration(BaseModel):
     mac_address: str
     name: str
+    ssh_username: Optional[str] = Field(None, description="SSH login username")
+    ssh_password: Optional[str] = Field(None, description="SSH login password")
     standard_cycle_time: Optional[float] = Field(None, description="Standard cycle time in seconds")
-    planned_production_quantity: Optional[int] = Field(None, description="Planned production quantity")
-    planned_production_time: Optional[float] = Field(None, description="Planned production time in hours")
 
 class DeviceUpdate(BaseModel):
     mac_address: Optional[str] = None
     name: Optional[str] = None
+    ssh_username: Optional[str] = None
+    ssh_password: Optional[str] = None
     standard_cycle_time: Optional[float] = None
-    planned_production_quantity: Optional[int] = None
-    planned_production_time: Optional[float] = None
+
+class DeviceRuntimeNetworkUpdate(BaseModel):
+    last_known_ip_address: IPvAnyAddress
+
+class DeviceRuntimeNetworkInfo(BaseModel):
+    device_id: int
+    last_known_ip_address: str
+
+    model_config = ConfigDict(from_attributes=True)
 
 # classifications
 class ClassificationGroupBase(BaseModel):
@@ -200,25 +209,7 @@ class User(BaseModel):
     class Config:
         from_attributes = True
 
-# groups
-class GroupBase(BaseModel):
-    name: str
-
-class GroupCreate(GroupBase):
-    pass
-
-class GroupUpdate(GroupBase):
-    pass
-
-class Group(GroupBase):
-    id: int
-    users: List[User] = []
-
-    model_config = ConfigDict(from_attributes=True)
-
-# 循環参照問題の解決
 User.model_rebuild()
-Group.model_rebuild()
 
 # clients
 class ClientBase(BaseModel):
@@ -237,14 +228,18 @@ class DeviceOut(BaseModel):
     id: int
     mac_address: str
     name: str
+    last_known_ip_address: str | None = None
+    ssh_username: str | None = None
+    ssh_password: str | None = None
     standard_cycle_time: float | None
-    planned_production_quantity: int | None
-    planned_production_time: float | None
     clients: List[Client] = []
     alarm_groups: List['AlarmGroup'] = []
 
     class Config:
         from_attributes = True
+
+
+Device = DeviceOut
 
 class ClientCreate(BaseModel):
     name: str
@@ -591,9 +586,9 @@ class DeviceFullInfo(BaseModel):
     id: int
     mac_address: str
     name: str
+    last_known_ip_address: Optional[str] = None
+    ssh_username: Optional[str] = None
     standard_cycle_time: Optional[float]
-    planned_production_quantity: Optional[int]
-    planned_production_time: Optional[float]
     alarm_groups: List[AlarmGroupFullInfo]
     quality_control_signals: List[QualityControlSignalFullInfo]
     efficiency_addresses: List[EfficiencyAddressFullInfo]
@@ -603,48 +598,13 @@ class DeviceFullInfo(BaseModel):
     class Config:
         from_attributes = True
 
-class ScanRequest(BaseModel):
-    device_id: int
-    scan_data: str
-
-class ScanResponse(BaseModel):
-    category: str
-    user_id: str
-    user_name: str
-    state: bool
-
-class UserMeasurement(BaseModel):
-    device_id: int
-    user_id: str
-    state: bool
-    event_time: datetime
-
-    class Config:
-        from_attributes = True
-
-class UserMeasurementWithName(BaseModel):
-    device_id: int
-    user_id: str
-    user_name: str  # ユーザー名を追加
-    state: bool
-    event_time: datetime
-
-    class Config:
-        from_attributes = True
-
-class UserMeasurementCreate(BaseModel):
-    device_id: int
-    user_id: str
-    state: bool
-    event_time: datetime
-
 class DeviceInfo(BaseModel):
     id: int
     mac_address: str
     name: str
+    last_known_ip_address: Optional[str] = None
+    ssh_username: Optional[str] = None
     standard_cycle_time: Optional[float] = None
-    planned_production_quantity: Optional[int] = None
-    planned_production_time: Optional[float] = None
 
     model_config = ConfigDict(from_attributes=True)
 

@@ -2,7 +2,7 @@
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.api.endpoints import devices, classifications, plcs, time_tables, customers, products, users, groups, scan, data, dashboard
+from app.api.endpoints import devices, classifications, plcs, time_tables, customers, products, users, data, dashboard
 
 # MQTT クライアントは別プロセス (mqtt_worker.py) で管理されるため、
 # FastAPI からは初期化しない
@@ -32,8 +32,6 @@ app.include_router(time_tables.router)
 app.include_router(customers.router)
 app.include_router(products.router)
 app.include_router(users.router)
-app.include_router(groups.router)
-app.include_router(scan.router)
 app.include_router(data.router)
 app.include_router(dashboard.router)
 

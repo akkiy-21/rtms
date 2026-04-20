@@ -7,24 +7,22 @@ from typing import List, Optional, Dict, Any
 from ..models import (
     Devices, Clients, EfficiencyAddresses, AlarmGroups, AlarmAddresses, 
     AlarmComments, LoggingSettings, LoggingDataSettings, QualityControlSignal, 
-    DeviceProductAssociation, Products, Customers, Classification, QualityControlMeasurements,
-    UserMeasurements
+    DeviceProductAssociation, Products, Customers, Classification, QualityControlMeasurements
 )
 from ..schemas import (
-    DeviceUpdate, ClientCreate, EfficiencyAddressCreate, EfficiencyAddressUpdate, AlarmGroupCreate, 
+    DeviceRegistration, DeviceUpdate, ClientCreate, EfficiencyAddressCreate, EfficiencyAddressUpdate, AlarmGroupCreate, 
     AlarmGroupUpdate, AlarmAddressCreate, AlarmAddressUpdate, AlarmCommentCreate, LoggingSettingCreate, 
     LoggingSettingUpdate, LoggingDataSettingCreate, LoggingDataSettingUpdate, QualityControlSignalCreate, QualityControlSignalUpdate
 )
 
 
-def create_device(db: Session, mac_address: str, name: str, standard_cycle_time: Optional[float] = None,
-                  planned_production_quantity: Optional[int] = None, planned_production_time: Optional[float] = None) -> Devices:
+def create_device(db: Session, registration: DeviceRegistration) -> Devices:
     db_device = Devices(
-        mac_address=mac_address,
-        name=name,
-        standard_cycle_time=standard_cycle_time,
-        planned_production_quantity=planned_production_quantity,
-        planned_production_time=planned_production_time
+        mac_address=registration.mac_address,
+        name=registration.name,
+        ssh_username=registration.ssh_username,
+        ssh_password=registration.ssh_password,
+        standard_cycle_time=registration.standard_cycle_time,
     )
     db.add(db_device)
     db.commit()
@@ -58,15 +56,32 @@ def update_device(db: Session, device_id: int, device_update: DeviceUpdate) -> O
         'id': db_device.id,
         'mac_address': db_device.mac_address,
         'name': db_device.name,
+        'last_known_ip_address': db_device.last_known_ip_address,
+        'ssh_username': db_device.ssh_username,
+        'ssh_password': db_device.ssh_password,
         'standard_cycle_time': db_device.standard_cycle_time,
-        'planned_production_quantity': db_device.planned_production_quantity,
-        'planned_production_time': db_device.planned_production_time
     }
+
+def update_device_runtime_network(db: Session, device_id: int, last_known_ip_address: str) -> Optional[Devices]:
+    db_device = db.query(Devices).filter(Devices.id == device_id).first()
+    if db_device is None:
+        return None
+
+    db_device.last_known_ip_address = last_known_ip_address
+
+    try:
+        db.commit()
+        db.refresh(db_device)
+    except SQLAlchemyError as e:
+        print(f"Error updating device runtime network: {e}")
+        db.rollback()
+        raise
+
+    return db_device
 
 def delete_device(db: Session, device_id: int) -> bool:
     try:
         # 関連データを先に削除
-        db.query(UserMeasurements).filter(UserMeasurements.device_id == device_id).delete()
         db.query(QualityControlMeasurements).filter(QualityControlMeasurements.device_id == device_id).delete()
         
         db_device = db.query(Devices).filter(Devices.id == device_id).first()
@@ -490,9 +505,3 @@ def get_device_full_info(db: Session, mac_address: str) -> Optional[Devices]:
         joinedload(Devices.logging_settings).joinedload(LoggingSettings.logging_data),
         joinedload(Devices.print_triggers)
     ).first()
-
-# UserMeasurement関連の CRUD 操作
-def get_latest_user_measurement(db: Session, device_id: int):
-    return db.query(UserMeasurements).filter(
-        UserMeasurements.device_id == device_id
-    ).order_by(UserMeasurements.event_time.desc()).first()

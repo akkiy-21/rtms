@@ -13,7 +13,6 @@ export * from './navigation-labels';
 export * from './validation-messages';
 export * from './table-labels';
 export * from './user-labels';
-export * from './group-labels';
 export * from './plc-labels';
 export * from './device-labels';
 export * from './classification-labels';

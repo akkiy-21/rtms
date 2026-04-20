@@ -2,9 +2,9 @@
   "id": 1,
   "mac_address": "2c:cf:67:6c:bf:82",
   "name": "ダンパーホーンS/W",
+  "last_known_ip_address": "192.168.0.25",
+  "ssh_username": "rtms",
   "standard_cycle_time": 1.8,
-  "planned_production_quantity": 30000,
-  "planned_production_time": 18,
   "alarm_groups": [],
   "quality_control_signals": [
     {

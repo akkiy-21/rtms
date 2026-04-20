@@ -6,7 +6,6 @@ import {
   Cpu,
   Clock,
   Users,
-  UsersRound,
   Building2,
   Package,
   Download,
@@ -75,11 +74,6 @@ export function Sidebar({ onNavigate }: SidebarProps) {
       label: NAVIGATION_LABELS.USERS,
       href: '/users',
       icon: <Users className="w-4 h-4" />,
-    },
-    {
-      label: NAVIGATION_LABELS.GROUPS,
-      href: '/groups',
-      icon: <UsersRound className="w-4 h-4" />,
     },
     {
       label: NAVIGATION_LABELS.DATA_DOWNLOAD,

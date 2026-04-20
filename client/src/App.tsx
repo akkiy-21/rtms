@@ -31,10 +31,7 @@ import { useProductionCalculations } from './hooks/useProductionCalculations';
 import { useDevice } from './contexts/DeviceContext';
 import { ScriptProvider, useScript } from './contexts/ScriptContext';
 import { useWebSocket } from './hooks/useWebSocket';
-import UserLoginDialog from './components/UserLoginDialog';
-import { ScanResult, ActiveUser } from './types';
 import { useCursorVisibility } from './hooks/useCursorVisibility';
-import { useScannerInput } from './hooks/useScannerInput';
 import { useDeviceSetup } from './hooks/useDeviceSetup';
 import { useDashboardPublisher } from './hooks/useDashboardPublisher';
 
@@ -71,8 +68,6 @@ const AppContent: React.FC = () => {
     console.log('🔌 isConfigConnected状態変更:', isConfigConnected);
   }, [isConfigConnected]);
 
-  const [userLoginDialogOpen, setUserLoginDialogOpen] = useState(false);
-  const [loginUserInfo, setLoginUserInfo] = useState({ userName: '', isLogin: false });
   const [mqttStatusDialogOpen, setMqttStatusDialogOpen] = useState(false);
 
   const [cumulativeTimes, setCumulativeTimes] = useState({
@@ -132,7 +127,7 @@ const AppContent: React.FC = () => {
       const [startHour, startMinute] = table.start_time.split(':').map(Number);
       const [endHour, endMinute] = table.end_time.split(':').map(Number);
 
-      let startTime = startHour * 60 + startMinute;
+      const startTime = startHour * 60 + startMinute;
       let endTime = endHour * 60 + endMinute;
 
       if (endTime <= startTime) {
@@ -162,8 +157,6 @@ const AppContent: React.FC = () => {
     setSelectedMac,
     macAddresses,
     mqttError,
-    activeUsers,
-    setActiveUsers,
     initializeApp,
   } = useDeviceSetup({
     loadSettings,
@@ -206,26 +199,18 @@ const AppContent: React.FC = () => {
     cumulativeTimes
   );
 
-  const productionAchievementRate = deviceConfig?.planned_production_quantity
-    ? (dailyProduction / deviceConfig.planned_production_quantity) * 100
-    : 0;
-
   const dashboardSnapshot = useMemo(() => ({
     status: operationStatus.status,
     category: operationStatus.category,
-    targetProduction: deviceConfig?.planned_production_quantity || 0,
     standardCycleTime: deviceConfig?.standard_cycle_time || 0,
     dailyProduction: dailyProduction,
     dailyEfficiency: parseFloat(dailyEfficiency.toFixed(3)),
     dailyAvgCycleTime: parseFloat(dailyAvgCycleTime.toFixed(3)),
-    productionAchievementRate: parseFloat(productionAchievementRate.toFixed(3)),
     hourlyProduction: hourlyProduction,
     hourlyEfficiency: parseFloat(hourlyEfficiency.toFixed(3)),
     hourlyNg: hourlyNg,
     dailyNg: dailyNg,
-    operators: activeUsers.map(user => user.user_name)
   }), [
-    activeUsers,
     dailyAvgCycleTime,
     dailyEfficiency,
     dailyNg,
@@ -234,8 +219,7 @@ const AppContent: React.FC = () => {
     hourlyEfficiency,
     hourlyNg,
     hourlyProduction,
-    operationStatus,
-    productionAchievementRate
+    operationStatus
   ]);
 
   useDashboardPublisher(dashboardSnapshot, mqttPublishInterval);
@@ -243,36 +227,6 @@ const AppContent: React.FC = () => {
   useEffect(() => {
     console.log('現在のデバイスID:', deviceId);
   }, [deviceId]);
-
-  // スキャンデータの処理
-  useScannerInput({
-    deviceId,
-    serverIP,
-    serverPort,
-    onUserIdScan: (result: ScanResult) => {
-      setLoginUserInfo({ userName: result.user_name, isLogin: result.state });
-      setUserLoginDialogOpen(true);
-
-      setActiveUsers(prevUsers => {
-        const newUser: ActiveUser = {
-          device_id: deviceId,
-          user_id: result.user_id,
-          user_name: result.user_name,
-          state: result.state,
-          event_time: new Date().toISOString()
-        };
-        if (result.state) {
-          return [...prevUsers.filter(user => user.user_id !== result.user_id), newUser];
-        }
-        return prevUsers.filter(user => user.user_id !== result.user_id);
-      });
-
-      setTimeout(() => {
-        setUserLoginDialogOpen(false);
-      }, 3000);
-    }
-  });
-
 
   const handleSaveSettingsAndReinitialize = async () => {
     await handleSaveSettings();
@@ -293,11 +247,7 @@ const AppContent: React.FC = () => {
       setScanTime(newScanTime);
     };
   
-    window.electronAPI.onUpdateScanTime(updateScanTime);
-  
-    return () => {
-      window.electronAPI.onUpdateScanTime(() => {});
-    };
+    return window.electronAPI.onUpdateScanTime(updateScanTime);
   }, []);
 
   useEffect(() => {
@@ -305,11 +255,7 @@ const AppContent: React.FC = () => {
       setErrorType(newErrorType);
     };
 
-    window.electronAPI.onUpdateErrorStatus(handleErrorStatus);
-
-    return () => {
-      window.electronAPI.onUpdateErrorStatus(() => {});
-    };
+    return window.electronAPI.onUpdateErrorStatus(handleErrorStatus);
   }, []);
 
   const handleDataUpdate = useCallback((data: any) => {
@@ -635,17 +581,15 @@ useEffect(() => {
           ...prevConfig,
           mac_address: updatedDeviceInfo.mac_address,
           name: updatedDeviceInfo.name,
+          ssh_username: updatedDeviceInfo.ssh_username,
           standard_cycle_time: updatedDeviceInfo.standard_cycle_time,
-          planned_production_quantity: updatedDeviceInfo.planned_production_quantity,
-          planned_production_time: updatedDeviceInfo.planned_production_time
         }));
         
         console.log('Device configuration updated:', {
           mac_address: updatedDeviceInfo.mac_address,
           name: updatedDeviceInfo.name,
+          ssh_username: updatedDeviceInfo.ssh_username,
           standard_cycle_time: updatedDeviceInfo.standard_cycle_time,
-          planned_production_quantity: updatedDeviceInfo.planned_production_quantity,
-          planned_production_time: updatedDeviceInfo.planned_production_time
         });
       } else if (data.type === 'plc_config') {
         const updatedConfig = await getDeviceConfig(serverIP, serverPort, selectedMac);
@@ -720,8 +664,6 @@ useEffect(() => {
                 dailyEfficiency={displayData.dailyEfficiency}
                 hourlyAvgCycleTime={hourlyAvgCycleTime}
                 dailyAvgCycleTime={dailyAvgCycleTime}
-                productionAchievementRate={productionAchievementRate}
-                activeUsers={activeUsers.filter(user => user.state)}
               />
             </Grid>
             <Grid item xs={9} sx={{ height: '100%' }}>
@@ -785,12 +727,6 @@ useEffect(() => {
         }}
       />
       <ErrorDialog open={errorType !== null && errorType !== 'high-scan-time'} errorType={errorType}/>
-      <UserLoginDialog
-        open={userLoginDialogOpen}
-        onClose={() => setUserLoginDialogOpen(false)}
-        userName={loginUserInfo.userName}
-        isLogin={loginUserInfo.isLogin}
-      />
     </ThemeProvider>
   );
 };

@@ -6,10 +6,10 @@ import {
   getTimeTables,
   DeviceNotFoundError,
   ServerConnectionError,
-  getLatestActiveUsers,
   findBestAdapter,
+  updateDeviceRuntimeNetwork,
 } from '../services/api';
-import type { ActiveUser, DeviceConfig, TimeTable } from '../types';
+import type { DeviceConfig, TimeTable } from '../types';
 
 export type UseDeviceSetupParams = {
   loadSettings: () => Promise<void>;
@@ -37,7 +37,6 @@ export const useDeviceSetup = ({
   const [selectedMac, setSelectedMac] = useState('');
   const [macAddresses, setMacAddresses] = useState<Systeminformation.NetworkInterfacesData[]>([]);
   const [mqttError, setMqttError] = useState(false);
-  const [activeUsers, setActiveUsers] = useState<ActiveUser[]>([]);
 
   const initializeApp = useCallback(async () => {
     setIsLoading(true);
@@ -73,13 +72,15 @@ export const useDeviceSetup = ({
       setLoadingMessage('最適なネットワークアダプターを選択中...');
       console.log('🔍 サーバーに接続可能なアダプターを検索中:', `http://${serverAddress}:${serverPort}`);
 
-      const bestMac = await findBestAdapter(addresses, serverAddress, serverPort);
+      const bestAdapter = await findBestAdapter(addresses, serverAddress, serverPort);
 
-      if (!bestMac) {
+      if (!bestAdapter) {
         console.error('❌ サーバーに接続可能なアダプターが見つかりませんでした');
         setConnectionError('connection');
         return;
       }
+
+      const bestMac = bestAdapter.macAddress;
 
       console.log('✅ 自動選択されたMACアドレス:', bestMac);
       setSelectedMac(bestMac);
@@ -100,13 +101,15 @@ export const useDeviceSetup = ({
           setDeviceId(config.id);
           console.log('Device ID set to:', config.id);
 
-          // アクティブユーザーを取得
-          try {
-            const users = await getLatestActiveUsers(serverAddress, serverPort, config.id);
-            setActiveUsers(users);
-          } catch (error) {
-            // 404エラーは通常の動作（データがない場合）なので、警告レベルで記録
-            console.warn('アクティブユーザーデータが見つかりませんでした（デバイスIDにデータが存在しない可能性があります）');
+          if (bestAdapter.ipAddress) {
+            try {
+              await updateDeviceRuntimeNetwork(serverAddress, serverPort, config.id, bestAdapter.ipAddress);
+              console.log('✅ デバイスIPをバックエンドへ同期しました:', bestAdapter.ipAddress);
+            } catch (runtimeNetworkError) {
+              console.warn('⚠️ デバイスIPの同期に失敗しました。起動処理は継続します。', runtimeNetworkError);
+            }
+          } else {
+            console.warn('⚠️ 選択されたアダプターのIPv4アドレスを取得できなかったため、デバイスIP同期をスキップします');
           }
         }
 
@@ -203,11 +206,7 @@ export const useDeviceSetup = ({
       }
     };
 
-    window.electronAPI.onMqttStatus(handleMqttStatus);
-
-    return () => {
-      window.electronAPI.onMqttStatus(() => {});
-    };
+    return window.electronAPI.onMqttStatus(handleMqttStatus);
   }, []);
 
   // ブリッジ再起動開始イベントをリッスン
@@ -222,11 +221,7 @@ export const useDeviceSetup = ({
       setLoadingMessage('ブリッジスクリプトを再起動中...');
     };
 
-    window.electronAPI.onBridgeRestartStarted(handleBridgeRestartStarted);
-
-    return () => {
-      window.electronAPI.onBridgeRestartStarted(() => {});
-    };
+    return window.electronAPI.onBridgeRestartStarted(handleBridgeRestartStarted);
   }, []);
 
   return {
@@ -240,8 +235,6 @@ export const useDeviceSetup = ({
     setSelectedMac,
     macAddresses,
     mqttError,
-    activeUsers,
-    setActiveUsers,
     initializeApp,
   };
 };

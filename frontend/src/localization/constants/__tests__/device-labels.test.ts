@@ -24,9 +24,9 @@ describe('DEVICE_LABELS', () => {
     it('主要なフィールドが日本語で定義されている', () => {
       expect(DEVICE_LABELS.FIELDS.NAME).toBe('デバイス名');
       expect(DEVICE_LABELS.FIELDS.MAC_ADDRESS).toBe('MAC Address');
+      expect(DEVICE_LABELS.FIELDS.SSH_USERNAME).toBe('SSHログインID');
+      expect(DEVICE_LABELS.FIELDS.SSH_PASSWORD).toBe('SSHパスワード');
       expect(DEVICE_LABELS.FIELDS.STANDARD_CYCLE_TIME).toBe('標準サイクルタイム');
-      expect(DEVICE_LABELS.FIELDS.PLANNED_PRODUCTION_QUANTITY).toBe('計画生産数量');
-      expect(DEVICE_LABELS.FIELDS.PLANNED_PRODUCTION_TIME).toBe('計画生産時間');
     });
 
     it('技術用語は英語表記を維持している', () => {
@@ -66,6 +66,7 @@ describe('DEVICE_LABELS', () => {
       expect(DEVICE_LABELS.ACTIONS.EDIT_DEVICE).toBe('デバイス編集');
       expect(DEVICE_LABELS.ACTIONS.DELETE_DEVICE).toBe('デバイス削除');
       expect(DEVICE_LABELS.ACTIONS.DETAIL_SETTINGS).toBe('詳細設定');
+      expect(DEVICE_LABELS.ACTIONS.SHOW_PASSWORD).toBe('パスワードを表示');
     });
   });
 
@@ -174,6 +175,7 @@ describe('DEVICE_LABELS', () => {
     it('ヘルプテキストが分かりやすい日本語で定義されている', () => {
       expect(DEVICE_LABELS.HELP_TEXT.MAC_ADDRESS).toContain('一意識別子');
       expect(DEVICE_LABELS.HELP_TEXT.NAME).toContain('識別しやすい名前');
+      expect(DEVICE_LABELS.HELP_TEXT.SSH_PASSWORD).toContain('伏字表示');
       expect(DEVICE_LABELS.HELP_TEXT.STANDARD_CYCLE_TIME).toContain('秒単位');
     });
   });

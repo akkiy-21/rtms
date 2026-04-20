@@ -86,9 +86,9 @@ const DeviceEditPage: React.FC = () => {
   const initialFormData: Partial<DeviceFormData> = {
     mac_address: device.mac_address,
     name: device.name,
+    ssh_username: device.ssh_username || '',
+    ssh_password: device.ssh_password || '',
     standard_cycle_time: device.standard_cycle_time || undefined,
-    planned_production_quantity: device.planned_production_quantity || undefined,
-    planned_production_time: device.planned_production_time || undefined,
   };
 
   return (

@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from typing import List, Union
 
 from ...database import get_db
-from ...schemas import DeviceRegistration, DeviceOut, DeviceUpdate, Client, ClientAssociation, ClientCreate, EfficiencyAddress, EfficiencyAddressCreate, EfficiencyAddressUpdate, AlarmGroup, AlarmGroupCreate, AlarmGroupUpdate, AlarmAddress, AlarmAddressCreate, AlarmComment, AlarmCommentCreate, LoggingSetting, LoggingSettingCreate, LoggingSettingUpdate, LoggingDataSetting, LoggingDataSettingCreate, LoggingDataSettingUpdate, QualityControlSignal, QualityControlSignalCreate, QualityControlSignalUpdate, DeviceProductAssociationResponse, DeviceProductAssociation, DeviceFullInfo, TimeTable, UserMeasurement, DeviceInfo
+from ...schemas import DeviceRegistration, DeviceOut, DeviceUpdate, DeviceRuntimeNetworkInfo, DeviceRuntimeNetworkUpdate, Client, ClientAssociation, ClientCreate, EfficiencyAddress, EfficiencyAddressCreate, EfficiencyAddressUpdate, AlarmGroup, AlarmGroupCreate, AlarmGroupUpdate, AlarmAddress, AlarmAddressCreate, AlarmComment, AlarmCommentCreate, LoggingSetting, LoggingSettingCreate, LoggingSettingUpdate, LoggingDataSetting, LoggingDataSettingCreate, LoggingDataSettingUpdate, QualityControlSignal, QualityControlSignalCreate, QualityControlSignalUpdate, DeviceProductAssociationResponse, DeviceProductAssociation, DeviceFullInfo, TimeTable, DeviceInfo
 from ...services import device_service
 
 router = APIRouter(
@@ -36,6 +36,17 @@ async def update_device(device_id: int, device_update: DeviceUpdate, db: Session
         raise HTTPException(status_code=404, detail="Device not found or could not be updated")
     return updated_device
 
+@router.put("/{device_id}/runtime-network", response_model=DeviceRuntimeNetworkInfo)
+async def update_device_runtime_network(
+    device_id: int,
+    runtime_network_update: DeviceRuntimeNetworkUpdate,
+    db: Session = Depends(get_db),
+):
+    updated_runtime_network = device_service.update_device_runtime_network(db, device_id, runtime_network_update)
+    if updated_runtime_network is None:
+        raise HTTPException(status_code=404, detail="Device not found")
+    return updated_runtime_network
+
 @router.delete("/{device_id}", status_code=204)
 async def delete_device(device_id: int, db: Session = Depends(get_db)):
     success = device_service.delete_device(db, device_id)
@@ -52,9 +63,9 @@ async def get_device_info(device_id: int, db: Session = Depends(get_db)):
         id=device.id,
         mac_address=device.mac_address,
         name=device.name,
+        last_known_ip_address=device.last_known_ip_address,
+        ssh_username=device.ssh_username,
         standard_cycle_time=device.standard_cycle_time,
-        planned_production_quantity=device.planned_production_quantity,
-        planned_production_time=device.planned_production_time
     )
 
 @router.get("/full-info/{mac_address}", response_model=DeviceFullInfo)

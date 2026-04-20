@@ -30,13 +30,7 @@ class SignalType(enum.Enum):
     Ng = "Ng"
     Optional = "Optional"
 
-user_group_association = Table('user_group', Base.metadata,
-    Column('user_id', String(10), ForeignKey('users.id')),
-    Column('group_id', Integer, ForeignKey('groups.id'))
-)
-
 class CodeType(enum.Enum):
-    UserID = "UserID"   # ユーザーID
     ProductNumber = "ProductNumber"   # 製品品番
 
 class CodeLengthRule(Base):
@@ -53,8 +47,6 @@ class Users(Base):
     name = Column(String(100))
     password = Column(String(50), nullable=True)
     role = Column(Enum(UserRole), nullable=False)
-    groups = relationship("Groups", secondary=user_group_association, back_populates="users")
-    user_measurements = relationship("UserMeasurements", back_populates="user")
 
     def __repr__(self):
         return "<User(name='%s', role='%s')>" % (self.name, self.role.name)
@@ -70,30 +62,6 @@ class Users(Base):
         if not id.isalnum() or len(id) > 10:
             raise ValueError("Employee ID must be an alphanumeric string with a maximum of 10 characters")
         return id
-
-class Groups(Base):
-    __tablename__ = 'groups'
-    id = Column(Integer, primary_key=True)
-    name = Column(String(100), unique=True)
-    users = relationship("Users", secondary=user_group_association, back_populates="groups")
-
-    def __repr__(self):
-        return "<Group(name='%s')>" % (self.name)
-    
-class UserMeasurements(Base):
-    __tablename__ = 'user_measurements'
-    
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    device_id = Column(Integer, ForeignKey('devices.id'), nullable=False)
-    user_id = Column(String(10), ForeignKey('users.id'), nullable=False)
-    state = Column(Boolean, nullable=False)
-    event_time = Column(DateTime(timezone=True), nullable=False)
-    
-    device = relationship("Devices", back_populates="user_measurements")
-    user = relationship("Users", back_populates="user_measurements")
-
-    def __repr__(self):
-        return f"<UserMeasurement(id={self.id}, device_id={self.device_id}, user_id='{self.user_id}', state={self.state}, event_time='{self.event_time}')>"
 
 class PLC(Base):
     __tablename__ = 'plcs'
@@ -125,9 +93,10 @@ class Devices(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     mac_address = Column(String(17), unique=True, index=True)
     name = Column(String(100))
+    last_known_ip_address = Column(String(45), nullable=True)
+    ssh_username = Column(String(100), nullable=True)
+    ssh_password = Column(String(255), nullable=True)
     standard_cycle_time = Column(Float, nullable=True)
-    planned_production_quantity = Column(Integer, nullable=True)
-    planned_production_time = Column(Float, nullable=True)
 
     clients = relationship("Clients", back_populates="device", cascade="all, delete-orphan")
     alarm_groups = relationship("AlarmGroups", back_populates="device", cascade="all, delete-orphan")
@@ -144,7 +113,6 @@ class Devices(Base):
     logging_data_measurements = relationship("LoggingDataMeasurements", back_populates="device", cascade="all, delete-orphan")
     alarm_measurements = relationship("AlarmMeasurements", back_populates="device", cascade="all, delete-orphan")
     efficiency_addresses = relationship("EfficiencyAddresses", back_populates="device", cascade="all, delete-orphan")
-    user_measurements = relationship("UserMeasurements", back_populates="device")
 
     def __repr__(self):
         return f"<Device(id={self.id}, mac_address='{self.mac_address}', name='{self.name}')>"

@@ -3,17 +3,14 @@ import { useEffect, useRef } from 'react';
 export type DashboardSnapshot = {
   status: string | null;
   category: string | null;
-  targetProduction: number;
   standardCycleTime: number;
   dailyProduction: number;
   dailyEfficiency: number;
   dailyAvgCycleTime: number;
-  productionAchievementRate: number;
   hourlyProduction: number;
   hourlyEfficiency: number;
   hourlyNg: number;
   dailyNg: number;
-  operators: string[];
 };
 
 /**

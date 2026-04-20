@@ -7,7 +7,7 @@ import traceback
 
 from ..crud import device_crud, data_crud
 from ..schemas import (
-    DeviceOut, DeviceRegistration, DeviceUpdate, Client, ClientAssociation, 
+    DeviceOut, DeviceRegistration, DeviceUpdate, DeviceRuntimeNetworkInfo, DeviceRuntimeNetworkUpdate, Client, ClientAssociation, 
     ClientCreate, EfficiencyAddress, EfficiencyAddressCreate, EfficiencyAddressUpdate, AlarmGroup, 
     AlarmGroupCreate, AlarmGroupUpdate, AlarmAddress, AlarmAddressCreate, AlarmAddressUpdate, 
     AlarmComment, LoggingSettingCreate, LoggingSettingUpdate, LoggingDataSettingCreate, LoggingDataSettingUpdate, 
@@ -26,14 +26,7 @@ print("MQTT client in device_service.py:", mqtt_client)
 
 def register_device(db: Session, registration: DeviceRegistration) -> Optional[DeviceOut]:
     try:
-        device = device_crud.create_device(
-            db,
-            registration.mac_address,
-            registration.name,
-            registration.standard_cycle_time,
-            registration.planned_production_quantity,
-            registration.planned_production_time
-        )
+        device = device_crud.create_device(db, registration)
         print("MQTT client in register_device:", mqtt_client)
         print("MQTT client type:", type(mqtt_client))
         mqtt_client.add_device(device.id, device.mac_address)
@@ -41,6 +34,7 @@ def register_device(db: Session, registration: DeviceRegistration) -> Optional[D
     except SQLAlchemyError as e:
         print(f"SQLAlchemy error in register_device: {e}")
         print(traceback.format_exc())
+        db.rollback()
         if "ix_devices_mac_address" in str(e):
             raise HTTPException(status_code=400, detail="MAC address already exists")
         raise HTTPException(status_code=500, detail="An error occurred while registering the device")
@@ -81,6 +75,30 @@ def update_device(db: Session, device_id: int, device_update: DeviceUpdate) -> O
         print(traceback.format_exc())
         db.rollback()
         raise HTTPException(status_code=500, detail="An error occurred while updating the device")
+
+def update_device_runtime_network(
+    db: Session,
+    device_id: int,
+    runtime_network_update: DeviceRuntimeNetworkUpdate,
+) -> Optional[DeviceRuntimeNetworkInfo]:
+    try:
+        device = device_crud.update_device_runtime_network(
+            db,
+            device_id,
+            str(runtime_network_update.last_known_ip_address),
+        )
+        if device is None:
+            return None
+
+        return DeviceRuntimeNetworkInfo(
+            device_id=device.id,
+            last_known_ip_address=device.last_known_ip_address,
+        )
+    except SQLAlchemyError as e:
+        print(f"SQLAlchemy error in update_device_runtime_network: {e}")
+        print(traceback.format_exc())
+        db.rollback()
+        raise HTTPException(status_code=500, detail="An error occurred while updating the device runtime network")
 
 def delete_device(db: Session, device_id: int) -> bool:
     result = device_crud.delete_device(db, device_id)
@@ -358,9 +376,9 @@ def get_device_full_info(db: Session, mac_address: str) -> Optional[DeviceFullIn
         id=device.id,
         mac_address=device.mac_address,
         name=device.name,
+        last_known_ip_address=device.last_known_ip_address,
+        ssh_username=device.ssh_username,
         standard_cycle_time=device.standard_cycle_time,
-        planned_production_quantity=device.planned_production_quantity,
-        planned_production_time=device.planned_production_time,
         alarm_groups=[
             AlarmGroupFullInfo(
                 id=ag.id,

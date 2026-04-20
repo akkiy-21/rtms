@@ -3,9 +3,9 @@ export interface DeviceConfig {
     id: number;
     mac_address: string;
     name: string;
+    last_known_ip_address?: string | null;
+    ssh_username?: string | null;
     standard_cycle_time: number;
-    planned_production_quantity: number;
-    planned_production_time: number;
     alarm_groups: any[]; // 必要に応じて詳細な型を定義
     efficiency_addresses: any[]; // 必要に応じて詳細な型を定義
     logging_settings: any[]; // 必要に応じて詳細な型を定義
@@ -86,28 +86,18 @@ export type ProductionStats = {
     productionCount: number;
   };
 
-export interface ActiveUser {
-  device_id: number;
-  user_id: string;
-  user_name: string;
-  state: boolean;
-  event_time: string;
-}
-
-export interface ScanResult {
-  category: string;
-  user_id: string;
-  user_name: string;
-  state: boolean;
-}
-
 export interface DeviceInfo {
   id: number;
   mac_address: string;
   name: string;
+  last_known_ip_address?: string | null;
+  ssh_username?: string | null;
   standard_cycle_time: number | null;
-  planned_production_quantity: number | null;
-  planned_production_time: number | null;
+}
+
+export interface SelectedAdapter {
+  macAddress: string;
+  ipAddress: string | null;
 }
 
 // ネットワーク設定関連の型定義
