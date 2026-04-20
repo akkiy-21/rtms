@@ -1,0 +1,508 @@
+#cloud-config
+#
+# This is default cloud-init config file for AlmaLinux Raspberry Pi image.
+#
+# If you want additional customization, refer to cloud-init documentation and
+# examples. Please note configurations written in this file will be usually
+# applied only once at very first boot.
+#
+# https://cloudinit.readthedocs.io/en/latest/reference/examples.html
+
+# Follow the log from Cloud-Init
+# tail -f /var/log/cloud-init-output.log
+
+# parameters
+# SWITCH_TO_FA=true|false
+# DO_DNF_UPGRADE=true|false
+
+
+hostname: SBC0027.local
+manage_etc_hosts: true
+timezone: Asia/Tokyo
+locale: ja_JP.UTF-8
+ssh_pwauth: true
+
+users:
+  - default
+  - name: mmi
+    groups: [ adm, systemd-journal ]
+    sudo: [ "ALL=(ALL) NOPASSWD:ALL" ]
+    lock_passwd: false
+    #passwd: $6$EJCqLU5JAiiP5iSS$wRmPHYdotZEXa8OjfcSsJ/f1pAYTk0/OFHV1CGvcszwmk6YwwlZ/Lwg8nqjRT0SSKJIMh/3VuW5ZBz2DqYZ4c1
+
+    # Linux端末を使用し、opensslでパスワードハッシュを生成
+    # openssl passwd -6
+    # @Miyazaki2275
+    passwd: $6$y3RssXn7c1UPv8rt$ZsNQBYdUObpnR1APt4pKBKMr6EZH8FrfR.630ckScqtTsWCEofvt3KS/epa3abCBf.r0kEgjW4QcRl3YbA2lH/
+    # Uncomment below to add your SSH public keys as YAML array
+    #ssh_authorized_keys:
+      #- ssh-ed25519 AAAAC3Nz...
+
+# 日本語入力・表示のための環境変数（シェル全体に適用）
+write_files:
+  - path: /etc/profile.d/ibus.sh
+    permissions: '0644'
+    owner: root:root
+    content: |
+      export GTK_IM_MODULE=ibus
+      export QT_IM_MODULE=ibus
+      export XMODIFIERS=@im=ibus
+  - path: /usr/local/sbin/wifi-connect-retry.sh
+    permissions: '0755'
+    owner: root:root
+    content: |
+      #!/bin/bash
+      set -euo pipefail
+      # 使い方: wifi-connect-retry.sh <SSID> [IFNAME]
+      SSID="${1:-matsuo-miyazaki-wifi}"
+      DEV="${2:-wlan0}"
+      TRIES=${TRIES:-8}
+      WAIT=${WAIT:-5}
+      LOG="/var/log/wifi-connect-retry.log"
+
+      nmcli radio wifi on || true
+      for i in $(seq 1 "$TRIES"); do
+        echo "$(date -Is) [$i/$TRIES] nmcli con up \"$SSID\"" | tee -a "$LOG"
+        nmcli -w 20 con up "$SSID" >>"$LOG" 2>&1 || true
+        if nmcli -t -f NAME,DEVICE con show --active | grep -q "^${SSID}:${DEV}$"; then
+          # 反映に時間がかかる場合があるため数秒待機してからIP確認
+          sleep 2
+          IP4=$(ip -4 -o addr show dev "$DEV" | awk '{print $4}' | head -n1 || true)
+          echo "$(date -Is) connected ${SSID} on ${DEV} ip=${IP4}" | tee -a "$LOG"
+          exit 0
+        fi
+        nmcli dev wifi rescan || true
+        sleep "$WAIT"
+      done
+      echo "$(date -Is) failed to connect ${SSID} after ${TRIES} attempts" | tee -a "$LOG"
+      exit 1
+  - path: /etc/mmi-kiosk.conf
+    permissions: '0644'
+    owner: root:root
+    content: |
+      # 切り替え制御: true でセットアップ完了後に "matsuo-miyazaki-wifi-FA" へ接続先を切り替えます。
+      # false にすると切り替えをスキップし、初期の "matsuo-miyazaki-wifi" 接続を維持します。
+      SWITCH_TO_FA=true
+      
+      # キオスクセッション種別: xorg | wayland
+      KIOSK_SESSION=xorg
+
+      # メモリ不足対策（swap有効化）
+      ENABLE_SWAP=true
+      # zram|file から選択（zram推奨）。zramが使えない場合は自動でfileにフォールバックします。
+      SWAP_MODE=zram
+      # zramの割合（総RAMの50%）として利用。zramctlで動的に設定します。
+      ZRAM_FRACTION=0.5
+      # swapfile を使う場合のサイズ
+      SWAP_FILE_SIZE=2048M
+
+      # dnf アップグレードを実行するか（FA切替前に実施）。インターネット接続環境でのみ有効。
+      DO_DNF_UPGRADE=false
+  - path: /etc/sysctl.d/99-swap-tuning.conf
+    permissions: '0644'
+    owner: root:root
+    content: |
+      vm.swappiness = 80
+      vm.vfs_cache_pressure = 50
+  - path: /usr/share/xsessions/mmi-kiosk-xorg.desktop
+    permissions: '0644'
+    owner: root:root
+    content: |
+      [Desktop Entry]
+      Name=MMI Kiosk (Xorg)
+      Comment=MMI kiosk on Xorg with openbox
+      Exec=/usr/local/bin/mmi-kiosk-xsession
+      Type=Application
+      X-LightDM-DesktopName=MMI-Kiosk-Xorg
+      X-GDM-SessionRegisters=true
+  - path: /usr/local/bin/mmi-kiosk-xsession
+    permissions: '0755'
+    owner: root:root
+    content: |
+      #!/bin/sh
+      # Minimal Xorg session for kiosk
+      export LANG=ja_JP.UTF-8
+      export GTK_IM_MODULE=ibus
+      export QT_IM_MODULE=ibus
+      export XMODIFIERS=@im=ibus
+      # start ibus daemon (non-blocking)
+      ibus-daemon -drx >/dev/null 2>&1 &
+      # start openbox as a minimal WM
+      if command -v openbox-session >/dev/null 2>&1; then
+        openbox-session &
+      fi
+      # loop kiosk app (same as wayland kiosk script)
+      LOG=${XDG_CACHE_HOME:-$HOME/.cache}/kiosk-xorg.log
+      mkdir -p "$(dirname "$LOG")"
+      while true; do
+        /usr/local/bin/mmi-kiosk-run >> "$LOG" 2>&1
+        echo "$(date -Is) restarted" >> "$LOG"
+        sleep 1
+      done
+  - path: /usr/local/bin/mmi-kiosk-run
+    permissions: '0755'
+    owner: root:root
+    content: |
+      #!/bin/bash
+      set -euo pipefail
+      export LANG=ja_JP.UTF-8
+      export GTK_IM_MODULE=ibus
+      export QT_IM_MODULE=ibus
+      export XMODIFIERS=@im=ibus
+      # Chromium/Electron がシステムKeyringを使わないようにする（cookie暗号鍵含む）
+      # 参考: ArchWiki Chromium "Force a password store"
+      # https://wiki.archlinux.org/title/Chromium#Force_a_password_store
+      CHROMIUM_ELECTRON_FLAGS=(
+        --password-store=basic
+        --no-first-run
+        --no-default-browser-check
+      )
+      FLAGS_STR="${CHROMIUM_ELECTRON_FLAGS[*]}"
+      # アプリ実行バイナリを推定（必要なら KIOSK_APP_BIN で上書き）
+      APP_BIN="${KIOSK_APP_BIN:-/usr/bin/rtms-client}"
+      if [ -x "$APP_BIN" ]; then
+        exec "$APP_BIN" $FLAGS_STR
+      fi
+      if command -v rtms-client >/dev/null 2>&1; then
+        exec rtms-client $FLAGS_STR
+      fi
+      DESK_FILE=$(grep -Rl '^Exec=' /usr/share/applications 2>/dev/null | grep -i 'mmi-rtms' | head -n1 || true)
+      if [ -n "${DESK_FILE}" ]; then
+        EXE=$(awk -F= '/^Exec=/{print $2; exit}' "${DESK_FILE}")
+        if [ -n "${EXE}" ]; then
+          exec ${EXE} $FLAGS_STR
+        fi
+      fi
+      echo "mmi-kiosk-run: application not found. Set KIOSK_APP_BIN to binary path." >&2
+      sleep 10
+      exit 1
+  - path: /etc/gdm/custom.conf
+    permissions: '0644'
+    owner: root:root
+    content: |
+      [daemon]
+      AutomaticLoginEnable=True
+      AutomaticLogin=mmi
+      DefaultSession=gnome-kiosk-script-wayland
+      WaylandEnable=true
+
+      [security]
+
+      [xdmcp]
+
+      [chooser]
+
+      [debug]
+  - path: /var/lib/AccountsService/users/mmi
+    permissions: '0644'
+    owner: root:root
+    content: |
+      [User]
+      Session=gnome-kiosk-script-wayland
+      XSession=gnome-kiosk-script-wayland
+      SystemAccount=false
+  - path: /usr/local/bin/gnome-kiosk-script
+    permissions: '0755'
+    owner: root:root
+    content: |
+      #!/bin/sh
+      # wrapper to ensure gnome-kiosk can find the session script via PATH
+      exec /home/mmi/.local/bin/gnome-kiosk-script "$@"
+  - path: /home/mmi/.local/bin/gnome-kiosk-script
+    permissions: '0755'
+    owner: mmi:mmi
+    content: |
+      #!/bin/sh
+      # GNOME Kiosk script session launcher
+      LOG=${XDG_CACHE_HOME:-/home/mmi/.cache}/kiosk-script.log
+      mkdir -p "$(dirname "$LOG")"
+      echo "$(date -Is) kiosk script starting" >> "$LOG" 2>&1
+      while true; do
+          /usr/local/bin/mmi-kiosk-run >> "$LOG" 2>&1
+          RC=$?
+          echo "$(date -Is) app exited rc=$RC, restarting" >> "$LOG" 2>&1
+          sleep 1
+      done
+  # gnome-keyring の自動起動をキオスクで無効化（ユーザー単位のオーバーライド）
+  - path: /home/mmi/.config/autostart/gnome-keyring-pkcs11.desktop
+    permissions: '0644'
+    owner: mmi:mmi
+    content: |
+      [Desktop Entry]
+      Type=Application
+      Name=Disable gnome-keyring pkcs11
+      Comment=Disabled in kiosk
+      Hidden=true
+      X-GNOME-Autostart-enabled=false
+  - path: /home/mmi/.config/autostart/gnome-keyring-secrets.desktop
+    permissions: '0644'
+    owner: mmi:mmi
+    content: |
+      [Desktop Entry]
+      Type=Application
+      Name=Disable gnome-keyring secrets
+      Comment=Disabled in kiosk
+      Hidden=true
+      X-GNOME-Autostart-enabled=false
+  - path: /home/mmi/.config/autostart/gnome-keyring-ssh.desktop
+    permissions: '0644'
+    owner: mmi:mmi
+    content: |
+      [Desktop Entry]
+      Type=Application
+      Name=Disable gnome-keyring ssh
+      Comment=Disabled in kiosk
+      Hidden=true
+      X-GNOME-Autostart-enabled=false
+
+# Wi-Fi自動接続（NetworkManager使用）
+runcmd:
+  - rfkill unblock wifi || true
+  - nmcli radio wifi on
+  - sleep 3
+  # 既存の Wi‑Fi プロファイルを整理
+  - nmcli con delete "matsuo-miyazaki-wifi" || true
+  - nmcli con delete "matsuo-miyazaki-wifi-FA" || true
+  # 静的IP込みで新規 Wi‑Fi プロファイルを作成（DHCPを使わない）
+  - nmcli con add type wifi ifname wlan0 con-name "matsuo-miyazaki-wifi" ssid "matsuo-miyazaki-wifi"
+  - nmcli con mod "matsuo-miyazaki-wifi" wifi-sec.key-mgmt wpa-psk
+  - nmcli con mod "matsuo-miyazaki-wifi" wifi-sec.psk "MatsuO-WlaN"
+  - nmcli con mod "matsuo-miyazaki-wifi" ipv4.addresses 172.16.2.1/16
+  - nmcli con mod "matsuo-miyazaki-wifi" ipv4.gateway 172.16.254.254
+  - nmcli con mod "matsuo-miyazaki-wifi" ipv4.dns 172.16.254.254
+  - nmcli con mod "matsuo-miyazaki-wifi" ipv4.method manual
+  - nmcli con mod "matsuo-miyazaki-wifi" ipv6.method ignore
+  - nmcli con mod "matsuo-miyazaki-wifi" 802-11-wireless.powersave 2
+  - nmcli con mod "matsuo-miyazaki-wifi" connection.autoconnect yes
+  # 切替先（ローカル環境・インターネット無し）Wi‑Fi プロファイルを作成
+  - nmcli con add type wifi ifname wlan0 con-name "matsuo-miyazaki-wifi-FA" ssid "matsuo-miyazaki-wifi-FA"
+  - nmcli con mod "matsuo-miyazaki-wifi-FA" wifi-sec.key-mgmt wpa-psk
+  - nmcli con mod "matsuo-miyazaki-wifi-FA" wifi-sec.psk "@Mmi2275"
+  - nmcli con mod "matsuo-miyazaki-wifi-FA" ipv4.addresses 172.17.1.36/16
+  - nmcli con mod "matsuo-miyazaki-wifi-FA" ipv4.gateway 172.17.254.254
+  - nmcli con mod "matsuo-miyazaki-wifi-FA" ipv4.dns 172.17.254.254
+  - nmcli con mod "matsuo-miyazaki-wifi-FA" ipv4.method manual
+  - nmcli con mod "matsuo-miyazaki-wifi-FA" ipv6.method ignore
+  - nmcli con mod "matsuo-miyazaki-wifi-FA" 802-11-wireless.powersave 2
+  - nmcli con mod "matsuo-miyazaki-wifi-FA" connection.autoconnect yes
+  - /usr/local/sbin/wifi-connect-retry.sh || true
+  # ===== メモリ不足対策（swap / dnf軽量化）ここから =====
+  - |
+    bash -lc '
+      set -eu
+      . /etc/os-release || true
+      CONF=/etc/mmi-kiosk.conf
+      ENABLE_SWAP=true
+      SWAP_MODE=zram
+      ZRAM_FRACTION=0.5
+      SWAP_FILE_SIZE=2048M
+      [ -f "$CONF" ] && . "$CONF" || true
+
+      # 既存swapがあれば何もしない
+      if [ -z "$(swapon --noheadings || true)" ] && [ "${ENABLE_SWAP:-true}" = "true" ]; then
+        echo "[cloud-init] enabling swap (mode=${SWAP_MODE})" | systemd-cat -t cloud-init || true
+        # まずzramに挑戦
+        if [ "${SWAP_MODE}" = "zram" ]; then
+          modprobe zram || true
+          if command -v zramctl >/dev/null 2>&1; then
+            MEM_KB=$(awk "/MemTotal:/ {print \$2}" /proc/meminfo)
+            # 既定: RAMの50%
+            FRAC=${ZRAM_FRACTION:-0.5}
+            ZRAM_KB=$(awk -v m="$MEM_KB" -v f="$FRAC" 'BEGIN{printf "%d", m*f}')
+            DEV=$(zramctl --find --size ${ZRAM_KB}K 2>/dev/null || true)
+            if [ -n "$DEV" ]; then
+              mkswap "$DEV" && swapon -p 100 "$DEV" || true
+            fi
+          fi
+        fi
+        # zramが無効のままならswapfile
+        if [ -z "$(swapon --noheadings || true)" ]; then
+          echo "[cloud-init] fallback to swapfile" | systemd-cat -t cloud-init || true
+          fallocate -l ${SWAP_FILE_SIZE} /swapfile || dd if=/dev/zero of=/swapfile bs=1M count=2048
+          chmod 600 /swapfile
+          mkswap /swapfile
+          swapon /swapfile
+          if ! grep -q "^/swapfile" /etc/fstab; then
+            echo "/swapfile swap swap defaults 0 0" >> /etc/fstab
+          fi
+        fi
+        sysctl --system || true
+        echo "[cloud-init] swap enabled: $(swapon --show --noheadings || echo none)" | systemd-cat -t cloud-init || true
+      fi'
+  - |
+    bash -lc '
+      # dnf を省メモリ設定に
+      set -eu
+      CFG=/etc/dnf/dnf.conf
+      if [ -f "$CFG" ]; then
+        grep -q "^max_parallel_downloads" "$CFG" || echo "max_parallel_downloads=1" >> "$CFG"
+        grep -q "^install_weak_deps" "$CFG" || echo "install_weak_deps=False" >> "$CFG"
+        grep -q "^fastestmirror" "$CFG" || echo "fastestmirror=True" >> "$CFG"
+      else
+        printf "[main]\nmax_parallel_downloads=1\ninstall_weak_deps=False\nfastestmirror=True\n" > "$CFG"
+      fi'
+  # ===== メモリ不足対策（swap / dnf軽量化）ここまで =====
+  # 日本語表示・入力に必要なパッケージを導入（Wi‑Fi 接続後に実行）
+  # AlmaLinux 10 では ibus-qt が存在しないため除外。フォントは存在する方を優先して導入。
+  - dnf -y install glibc-langpack-ja langpacks-ja ibus ibus-gtk3 ibus-anthy
+  - dnf -y install google-noto-sans-cjk-ttc-fonts || dnf -y install google-noto-sans-cjk-fonts || true
+  - dnf -y install vlgothic-fonts || true
+  # GNOME Kiosk + GDM でのキオスクを導入（Xorg/Waylandは依存として自動導入される）
+  - dnf -y install gnome-kiosk gnome-kiosk-script-session gdm || true
+  # Raspberry Pi のGPUオーバレイ設定（必要な機種のみ、存在すれば追記）
+  - if [ -f /boot/firmware/config.txt ]; then grep -q '^dtoverlay=vc4-kms-v3d' /boot/firmware/config.txt || echo 'dtoverlay=vc4-kms-v3d' >> /boot/firmware/config.txt; fi
+  # Electron を Wayland で動かす際の互換性向上（Xwayland）
+  - dnf -y install xorg-x11-server-Xwayland || true
+  # Xorg セッション用に必要なパッケージ導入（openbox）
+  - dnf -y install openbox || true
+  # （任意）DNFアップグレードの実行（トグルで制御、FA切替前に実施）
+  - |
+    bash -lc '
+      set -eu
+      CONF=/etc/mmi-kiosk.conf
+      DO_DNF_UPGRADE=false
+      [ -f "$CONF" ] && . "$CONF" || true
+      if [ "${DO_DNF_UPGRADE}" = "true" ]; then
+        echo "[cloud-init] start dnf upgrade" | systemd-cat -t cloud-init || true
+        # ネット疎通を軽く確認（10秒でタイムアウト）
+        timeout 10 getent hosts mirrors.almalinux.org >/dev/null 2>&1 || exit 0
+        dnf -y upgrade || dnf -y distro-sync || true
+        echo "[cloud-init] dnf upgrade done" | systemd-cat -t cloud-init || true
+      fi'
+  # kiosk スクリプトを mmi ユーザーに配置
+  - mkdir -p /home/mmi/.local/bin /home/mmi/.config /home/mmi/.cache
+  - bash -lc 'if [ ! -f /home/mmi/.local/bin/gnome-kiosk-script ]; then install -d -o mmi -g mmi /home/mmi/.local/bin /home/mmi/.cache; printf "%s\n" "#!/bin/sh" "# auto-generated by cloud-init" "while true; do" "    /usr/local/bin/mmi-kiosk-run >> \$HOME/.cache/kiosk-script.log 2>&1" "    echo \"\\n[\$(date -Is)] restarted\" >> \$HOME/.cache/kiosk-script.log" "    sleep 1" "done" > /home/mmi/.local/bin/gnome-kiosk-script; chown mmi:mmi /home/mmi/.local/bin/gnome-kiosk-script; chmod 0755 /home/mmi/.local/bin/gnome-kiosk-script; logger -t cloud-init "created /home/mmi/.local/bin/gnome-kiosk-script"; fi'
+  - chmod 0755 /home/mmi/.local/bin/gnome-kiosk-script || true
+  - chown -R mmi:mmi /home/mmi
+  - restorecon -RF /home/mmi || true
+  - restorecon -F /var/lib/AccountsService/users/mmi || true
+  # unzip のインストール（ZIP展開用）
+  - dnf -y install unzip || true
+  # 監視ツールの導入（EPEL フォールバック）
+  - dnf -y install htop || (dnf -y install epel-release && dnf -y --enablerepo=epel install htop) || true
+  - command -v crb >/dev/null 2>&1 && crb enable || true
+  # 軽量な履歴監視（sar/sysstat）を導入し、収集タイマーを有効化
+  - dnf -y install sysstat || (dnf -y install epel-release && dnf -y --enablerepo=epel install sysstat) || true
+  - if [ -f /etc/sysconfig/sysstat ]; then sed -i 's/^ENABLED=.*/ENABLED="true"/' /etc/sysconfig/sysstat; else echo 'ENABLED="true"' > /etc/sysconfig/sysstat; fi
+  - systemctl enable --now sysstat-collect.timer sysstat-summary.timer || systemctl enable --now sysstat || true
+  # 以前のTTYオートログイン/手動X起動の痕跡を無効化
+  - systemctl disable getty@tty1.service || true
+  - rm -f /etc/systemd/system/getty@tty1.service.d/autologin.conf || true
+  - systemctl daemon-reload
+  # GDM を有効化し、グラフィカルターゲットを既定に
+  - systemctl enable gdm.service
+  - systemctl set-default graphical.target
+  # キオスクセッション種別に応じて Wayland/Xorg を切替
+  - |
+    bash -lc '
+      set -eu
+      CONF=/etc/mmi-kiosk.conf
+      KIOSK_SESSION=wayland
+      if [ -f "$CONF" ]; then
+        # shellcheck disable=SC1090
+        . "$CONF"
+      fi
+      # 既定値補完
+      KIOSK_SESSION=${KIOSK_SESSION:-wayland}
+      
+      if [ "$KIOSK_SESSION" = "xorg" ]; then
+        echo "[cloud-init] configure Xorg kiosk" | systemd-cat -t cloud-init || true
+        # GDM を Xorg セッションへ固定
+        if grep -q "^WaylandEnable=" /etc/gdm/custom.conf; then
+          sed -i 's/^WaylandEnable=.*/WaylandEnable=false/' /etc/gdm/custom.conf
+        else
+          printf "\nWaylandEnable=false\n" >> /etc/gdm/custom.conf
+        fi
+        if grep -q "^DefaultSession=" /etc/gdm/custom.conf; then
+          sed -i 's/^DefaultSession=.*/DefaultSession=mmi-kiosk-xorg/' /etc/gdm/custom.conf
+        else
+          printf "\nDefaultSession=mmi-kiosk-xorg\n" >> /etc/gdm/custom.conf
+        fi
+        systemctl daemon-reload || true
+      else
+        echo "[cloud-init] keep Wayland kiosk" | systemd-cat -t cloud-init || true
+        # Wayland に戻す
+        if grep -q "^WaylandEnable=" /etc/gdm/custom.conf; then
+          sed -i 's/^WaylandEnable=.*/WaylandEnable=true/' /etc/gdm/custom.conf
+        else
+          printf "\nWaylandEnable=true\n" >> /etc/gdm/custom.conf
+        fi
+        if grep -q "^DefaultSession=" /etc/gdm/custom.conf; then
+          sed -i 's/^DefaultSession=.*/DefaultSession=gnome-kiosk-script-wayland/' /etc/gdm/custom.conf
+        else
+          printf "\nDefaultSession=gnome-kiosk-script-wayland\n" >> /etc/gdm/custom.conf
+        fi
+      fi'
+  # gnome-keyring をユーザーセッションで起動させない（mask）
+  - runuser -l mmi -c 'systemctl --user mask --now gnome-keyring-daemon.service gnome-keyring-daemon.socket' || true
+  # GDM PAM から pam_gnome_keyring を外して自動起動・自動アンロックを抑止
+  - if [ -f /etc/pam.d/gdm-password ]; then sed -i 's/^\(auth\s\+optional\s\+pam_gnome_keyring\.so.*\)$/# \1/' /etc/pam.d/gdm-password; sed -i 's/^\(session\s\+optional\s\+pam_gnome_keyring\.so.*\)$/# \1/' /etc/pam.d/gdm-password; fi
+  # CIDATA（/dev/mmcblk0p1）上の zips をローカルに複製して展開
+  - mkdir -p /root/zips
+  - if [ -d /boot/zips ]; then cp -a /boot/zips/* /root/zips/; else mkdir -p /mnt/seed; mount -o ro /dev/mmcblk0p1 /mnt/seed || true; if [ -d /mnt/seed/zips ]; then cp -a /mnt/seed/zips/* /root/zips/; fi; umount /mnt/seed || true; fi
+  # rtms-client ZIP を /opt/rtms-client に展開してセットアップ
+  - |
+    if ls /root/zips/rtms-client*.zip >/dev/null 2>&1; then
+      echo "[cloud-init] Extracting rtms-client from ZIP" | systemd-cat -t cloud-init || true
+      mkdir -p /opt/rtms-client
+      cd /opt/rtms-client
+      unzip -o /root/zips/rtms-client*.zip || true
+      # 所有者を mmi:mmi に変更
+      chown -R mmi:mmi /opt/rtms-client
+      # 実行権限を付与
+      chmod -R +x /opt/rtms-client
+      # シンボリックリンクを作成（rtms-client-linux-arm64 ディレクトリ内の rtms-client を指す）
+      if [ -f /opt/rtms-client/rtms-client-linux-arm64/rtms-client ]; then
+        ln -sf /opt/rtms-client/rtms-client-linux-arm64/rtms-client /usr/bin/rtms-client
+        echo "[cloud-init] rtms-client installed successfully" | systemd-cat -t cloud-init || true
+      else
+        echo "[cloud-init] ERROR: rtms-client binary not found in ZIP" | systemd-cat -t cloud-init || true
+      fi
+    fi
+  # initial_settings.json を CIDATA/zips からユーザー設定ディレクトリにコピー
+  - |
+    if [ -f /root/zips/initial_settings.json ]; then
+      echo "[cloud-init] Copying initial_settings.json to user config directory" | systemd-cat -t cloud-init || true
+      mkdir -p /home/mmi/.config/rtms-client
+      cp /root/zips/initial_settings.json /home/mmi/.config/rtms-client/initial_settings.json
+      chown mmi:mmi /home/mmi/.config/rtms-client/initial_settings.json
+      chmod 644 /home/mmi/.config/rtms-client/initial_settings.json
+      echo "[cloud-init] initial_settings.json copied successfully" | systemd-cat -t cloud-init || true
+    else
+      echo "[cloud-init] initial_settings.json not found in /root/zips, skipping" | systemd-cat -t cloud-init || true
+    fi
+  # 念のためホームの所有者を修正
+  - chown -R mmi:mmi /home/mmi
+  # システムロケールとキーボードを日本語に設定
+  - localectl set-locale LANG=ja_JP.UTF-8
+  - localectl set-keymap jp
+  - localectl set-x11-keymap jp
+  - sed -i '/^pool /d' /etc/chrony.conf
+  - sed -i '/^server /d' /etc/chrony.conf
+  - echo "server 172.17.254.254 iburst" >> /etc/chrony.conf
+  - systemctl restart chronyd
+  # 競合する TTY 自動ログインは無効のままにする（GDMキオスク優先）
+
+  # セットアップ完了後に接続先を "matsuo-miyazaki-wifi-FA" へ切替（必要に応じて無効化可能）
+  # SWITCH_TO_FA=true の場合に切り替え
+  - |
+    bash -lc '
+      set -eu
+      if [ -f /etc/mmi-kiosk.conf ] && grep -q "^SWITCH_TO_FA=true" /etc/mmi-kiosk.conf; then
+        echo "[cloud-init] Switching Wi-Fi to matsuo-miyazaki-wifi-FA" | systemd-cat -t cloud-init || true
+        nmcli con mod "matsuo-miyazaki-wifi" connection.autoconnect no || true
+        nmcli -w 10 con down "matsuo-miyazaki-wifi" || true
+        /usr/local/sbin/wifi-connect-retry.sh "matsuo-miyazaki-wifi-FA" || true
+        # 念のため NTP(chrony) を再起動
+        systemctl restart chronyd || true
+      else
+        echo "[cloud-init] SWITCH_TO_FA=false, keeping matsuo-miyazaki-wifi" | systemd-cat -t cloud-init || true
+      fi'
+
+# すべての設定完了後に再起動してキオスクを開始
+power_state:
+  mode: reboot
+  message: "Rebooting after cloud-init setup (mmi kiosk)"
+  timeout: 10
+  condition: True
+

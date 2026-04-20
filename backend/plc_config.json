@@ -1,0 +1,313 @@
+{
+  "id": 1,
+  "mac_address": "2c:cf:67:6c:bf:82",
+  "name": "ダンパーホーンS/W",
+  "standard_cycle_time": 1.8,
+  "planned_production_quantity": 30000,
+  "planned_production_time": 18,
+  "alarm_groups": [],
+  "quality_control_signals": [
+    {
+      "id": 1,
+      "client": {
+        "id": 1,
+        "name": "PLC",
+        "ip_address": "192.168.0.10/32",
+        "port_no": 5000,
+        "plc": {
+          "id": 1,
+          "model": "GeneralPLC",
+          "manufacturer": "KEYENCE",
+          "protocol": "MC"
+        }
+      },
+      "address_type": "B",
+      "address": "7000",
+      "signal_type": "Good",
+      "signal_shot_number": 1,
+      "signal_name": "良品1",
+      "parent_id": null,
+      "children": []
+    },
+    {
+      "id": 2,
+      "client": {
+        "id": 1,
+        "name": "PLC",
+        "ip_address": "192.168.0.10/32",
+        "port_no": 5000,
+        "plc": {
+          "id": 1,
+          "model": "GeneralPLC",
+          "manufacturer": "KEYENCE",
+          "protocol": "MC"
+        }
+      },
+      "address_type": "B",
+      "address": "7001",
+      "signal_type": "Good",
+      "signal_shot_number": 1,
+      "signal_name": "良品2",
+      "parent_id": null,
+      "children": []
+    },
+    {
+      "id": 3,
+      "client": {
+        "id": 1,
+        "name": "PLC",
+        "ip_address": "192.168.0.10/32",
+        "port_no": 5000,
+        "plc": {
+          "id": 1,
+          "model": "GeneralPLC",
+          "manufacturer": "KEYENCE",
+          "protocol": "MC"
+        }
+      },
+      "address_type": "B",
+      "address": "7002",
+      "signal_type": "Good",
+      "signal_shot_number": 1,
+      "signal_name": "良品3",
+      "parent_id": null,
+      "children": []
+    },
+    {
+      "id": 4,
+      "client": {
+        "id": 1,
+        "name": "PLC",
+        "ip_address": "192.168.0.10/32",
+        "port_no": 5000,
+        "plc": {
+          "id": 1,
+          "model": "GeneralPLC",
+          "manufacturer": "KEYENCE",
+          "protocol": "MC"
+        }
+      },
+      "address_type": "B",
+      "address": "7003",
+      "signal_type": "Good",
+      "signal_shot_number": 1,
+      "signal_name": "良品4",
+      "parent_id": null,
+      "children": []
+    },
+    {
+      "id": 6,
+      "client": {
+        "id": 1,
+        "name": "PLC",
+        "ip_address": "192.168.0.10/32",
+        "port_no": 5000,
+        "plc": {
+          "id": 1,
+          "model": "GeneralPLC",
+          "manufacturer": "KEYENCE",
+          "protocol": "MC"
+        }
+      },
+      "address_type": "B",
+      "address": "7011",
+      "signal_type": "Ng",
+      "signal_shot_number": 1,
+      "signal_name": "不良品2",
+      "parent_id": null,
+      "children": []
+    },
+    {
+      "id": 5,
+      "client": {
+        "id": 1,
+        "name": "PLC",
+        "ip_address": "192.168.0.10/32",
+        "port_no": 5000,
+        "plc": {
+          "id": 1,
+          "model": "GeneralPLC",
+          "manufacturer": "KEYENCE",
+          "protocol": "MC"
+        }
+      },
+      "address_type": "B",
+      "address": "7010",
+      "signal_type": "Ng",
+      "signal_shot_number": 1,
+      "signal_name": "不良品1",
+      "parent_id": null,
+      "children": []
+    },
+    {
+      "id": 7,
+      "client": {
+        "id": 1,
+        "name": "PLC",
+        "ip_address": "192.168.0.10/32",
+        "port_no": 5000,
+        "plc": {
+          "id": 1,
+          "model": "GeneralPLC",
+          "manufacturer": "KEYENCE",
+          "protocol": "MC"
+        }
+      },
+      "address_type": "B",
+      "address": "7012",
+      "signal_type": "Ng",
+      "signal_shot_number": 1,
+      "signal_name": "不良品3",
+      "parent_id": null,
+      "children": []
+    },
+    {
+      "id": 8,
+      "client": {
+        "id": 1,
+        "name": "PLC",
+        "ip_address": "192.168.0.10/32",
+        "port_no": 5000,
+        "plc": {
+          "id": 1,
+          "model": "GeneralPLC",
+          "manufacturer": "KEYENCE",
+          "protocol": "MC"
+        }
+      },
+      "address_type": "B",
+      "address": "7013",
+      "signal_type": "Ng",
+      "signal_shot_number": 1,
+      "signal_name": "不良品4",
+      "parent_id": null,
+      "children": []
+    },
+    {
+      "id": 9,
+      "client": {
+        "id": 1,
+        "name": "PLC",
+        "ip_address": "192.168.0.10/32",
+        "port_no": 5000,
+        "plc": {
+          "id": 1,
+          "model": "GeneralPLC",
+          "manufacturer": "KEYENCE",
+          "protocol": "MC"
+        }
+      },
+      "address_type": "B",
+      "address": "7014",
+      "signal_type": "Ng",
+      "signal_shot_number": 1,
+      "signal_name": "不良品5",
+      "parent_id": null,
+      "children": []
+    }
+  ],
+  "efficiency_addresses": [
+    {
+      "id": 1,
+      "client": {
+        "id": 1,
+        "name": "PLC",
+        "ip_address": "192.168.0.10/32",
+        "port_no": 5000,
+        "plc": {
+          "id": 1,
+          "model": "GeneralPLC",
+          "manufacturer": "KEYENCE",
+          "protocol": "MC"
+        }
+      },
+      "address_type": "B",
+      "address": "7020",
+      "classification": {
+        "id": 1,
+        "name": "稼働",
+        "group": {
+          "id": 1,
+          "name": "操業時間"
+        }
+      }
+    },
+    {
+      "id": 2,
+      "client": {
+        "id": 1,
+        "name": "PLC",
+        "ip_address": "192.168.0.10/32",
+        "port_no": 5000,
+        "plc": {
+          "id": 1,
+          "model": "GeneralPLC",
+          "manufacturer": "KEYENCE",
+          "protocol": "MC"
+        }
+      },
+      "address_type": "B",
+      "address": "7023",
+      "classification": {
+        "id": 3,
+        "name": "チョコ停",
+        "group": {
+          "id": 2,
+          "name": "性能ロス時間"
+        }
+      }
+    },
+    {
+      "id": 3,
+      "client": {
+        "id": 1,
+        "name": "PLC",
+        "ip_address": "192.168.0.10/32",
+        "port_no": 5000,
+        "plc": {
+          "id": 1,
+          "model": "GeneralPLC",
+          "manufacturer": "KEYENCE",
+          "protocol": "MC"
+        }
+      },
+      "address_type": "B",
+      "address": "7021",
+      "classification": {
+        "id": 9,
+        "name": "計画停止中",
+        "group": {
+          "id": 4,
+          "name": "計画停止時間"
+        }
+      }
+    },
+    {
+      "id": 4,
+      "client": {
+        "id": 1,
+        "name": "PLC",
+        "ip_address": "192.168.0.10/32",
+        "port_no": 5000,
+        "plc": {
+          "id": 1,
+          "model": "GeneralPLC",
+          "manufacturer": "KEYENCE",
+          "protocol": "MC"
+        }
+      },
+      "address_type": "B",
+      "address": "7022",
+      "classification": {
+        "id": 5,
+        "name": "段取り・調整",
+        "group": {
+          "id": 3,
+          "name": "停止ロス時間"
+        }
+      }
+    }
+  ],
+  "logging_settings": [],
+  "print_triggers": []
+}

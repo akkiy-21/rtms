@@ -1,0 +1,109 @@
+﻿# ==================================================
+# RTMS Monorepo .gitignore
+# ==================================================
+
+# --- Node.js / npm ---
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.npm
+.yarn-integrity
+*.tgz
+.node_repl_history
+
+# --- TypeScript ---
+*.tsbuildinfo
+
+# --- Python ---
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.py[oc]
+*.so
+*.egg
+*.egg-info/
+wheels/
+.Python
+
+# --- Python 仮想環境 ---
+.venv/
+venv/
+ENV/
+.uv/
+uv.lock
+
+# --- ビルド成果物 ---
+dist/
+build/
+out/
+/frontend/build/
+/client/out/
+/client/.webpack/
+/client-plc-bridge/main.dist/
+/client-plc-bridge/main.build/
+build/Release
+
+# --- 環境変数 ---
+.env
+.env.local
+.env.*.local
+.env.development.local
+.env.production.local
+.env.test
+
+# --- テストカバレッジ ---
+coverage/
+.nyc_output/
+*.lcov
+/backend/.pytest_cache/
+
+# --- Mosquitto ログ・データ ---
+mosquitto/data/
+mosquitto/log/
+
+# --- IDE ---
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# --- OS ---
+.DS_Store
+Thumbs.db
+
+# --- ログ ---
+*.log
+logs/
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# --- Electron Forge / Webpack ---
+.webpack/
+.vite/
+.cache
+.fusebox/
+.serverless/
+.dynamodb/
+.next
+.nuxt
+.vuepress/dist
+
+# --- client の大容量バイナリリソース ---
+/client/resources/bridge_aarch64_linux/**
+!/client/resources/bridge_aarch64_linux/.gitkeep
+/client/resources/bridge_x64_win/**
+!/client/resources/bridge_x64_win/.gitkeep
+
+# --- その他 ---
+*.bak
+*.tmp
+jspm_packages/
+lib-cov
+.lock-wscript
+report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json

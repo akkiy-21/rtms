@@ -1,0 +1,58 @@
+mmi_scada/
+│
+├── app/
+│   ├── __init__.py
+│   ├── main.py
+│   ├── database.py
+│   ├── mqtt_client.py
+│   ├── models.py
+│   ├── schemas.py
+│   │
+│   ├── services/
+│   │   ├── __init__.py
+│   │   ├── classification_service.py
+│   │   ├── plc_service.py
+│   │   ├── data_service.py
+│   │   ├── device_service.py
+│   │   ├── group_service.py
+│   │   ├── user_service.py
+│   │   ├── time_table_service.py
+│   │   ├── product_service.py
+│   │   ├── scan_service.py
+│   │   └── customer_service.py
+│   │
+│   ├── crud/
+│   │   ├── __init__.py
+│   │   ├── classification_crud.py
+│   │   ├── plc_crud.py
+│   │   ├── data_crud.py
+│   │   ├── device_crud.py
+│   │   ├── group_crud.py
+│   │   ├── user_crud.py
+│   │   ├── time_table_crud.py
+│   │   ├── product_crud.py
+│   │   └── customer_crud.py
+│   │
+│   └── api/
+│       ├── __init__.py
+│       └── endpoints/
+│           ├── __init__.py
+│           ├── classifications.py
+│           ├── plcs.py
+│           ├── devices.py
+│           ├── group.py
+│           ├── user.py
+│           ├── time_tables.py
+│           ├── products.py
+│           ├── scan.py
+│           └── customers.py
+│
+├── tests/
+│   └── ...
+│
+├── alembic/
+│   └── ...
+│
+├── run.py
+├── requirements.txt
+└── README.md

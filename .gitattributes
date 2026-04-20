@@ -1,0 +1,20 @@
+﻿# 自動改行コード正規化
+* text=auto
+
+# Shellスクリプト・cloud-initはLFを維持
+*.sh text eol=lf
+cloud-init/user-data text eol=lf
+cloud-init/network-config text eol=lf
+cloud-init/old/* text eol=lf
+
+# バイナリファイル
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.zip binary
+*.exe binary
+*.dll binary
+*.so binary
+*.node binary

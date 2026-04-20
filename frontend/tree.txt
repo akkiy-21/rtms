@@ -1,0 +1,94 @@
+src/
+│
+├── components/
+│   ├── DeviceForm.tsx
+│   ├── DeviceList.tsx
+│   ├── AlarmOffsetForm.tsx
+│   ├── AlarmAddressList.tsx
+│   ├── AlarmGroupForm.tsx
+│   ├── AlarmGroupList.tsx
+│   ├── CSVImporter.tsx
+│   ├── ClientList.tsx
+│   ├── ClientForm.tsx
+│   ├── LoggingDataSettingForm.tsx
+│   ├── LoggingDataSettingList.tsx
+│   ├── LoggingSettingForm.tsx
+│   ├── LoggingSettingList.tsx
+│   ├── ClassificationForm.tsx
+│   ├── ClassificationList.tsx
+│   ├── PLCForm.tsx
+│   ├── PLCList.tsx
+│   ├── TimeTableList.tsx
+│   ├── TimeTableForm.tsx
+│   ├── Layout.tsx
+│   ├── CustomerForm.tsx
+│   ├── CustomerList.tsx
+│   ├── GroupForm.tsx
+│   ├── GroupList.tsx
+│   ├── UserForm.tsx
+│   ├── UserList.tsx
+│   ├── QualityControlSignalForm.tsx
+│   ├── ProductForm.tsx
+│   └── ProductList.tsx
+│
+├── pages/
+│   ├── DevicesPage.tsx
+│   ├── DeviceCreatePage.tsx
+│   ├── DeviceEditPage.tsx
+│   ├── DeviceDetailSettingsPage.tsx
+│   ├── AlarmAddressesPage.tsx
+│   ├── AlarmGroupCreatePage.tsx
+│   ├── AlarmGroupsPage.tsx
+│   ├── ClientSettingsPage.tsx
+│   ├── ClientCreatePage.tsx
+│   ├── ClientEditPage.tsxt
+│   ├── LoggingSettingCreatePage.tsx
+│   ├── LoggingSettingEditPage.tsx
+│   ├── LoggingSettingsPage.tsx
+│   ├── AlarmSettingsPage.tsx
+│   ├── LoggingSettingsPage.tsx
+│   ├── EfficiencySettingsPage.tsx
+│   ├── IOSettingsPage.tsx
+│   ├── ProductSettingsPage.tsx
+│   ├── PLCsPage.tsx
+│   ├── PLCEditPage.tsx
+│   ├── PLCCreatePage.tsx
+│   ├── TimeTablePage.tsx
+│   ├── ClassificationCreatePage.tsx
+│   ├── ClassificationEditPage.tsx
+│   ├── ClassificationsPage.tsx
+│   ├── CustomersPage.tsx
+│   ├── CustomerCreatePage.tsx
+│   ├── CustomerEditPage.tsx
+│   ├── GroupCreatePage.tsx
+│   ├── GroupEditPage.tsx
+│   ├── GroupsPage.tsx
+│   ├── GroupUserPage.tsx
+│   ├── UserCreatePage.tsx
+│   ├── UserEditPage.tsx
+│   ├── UsersPage.tsx
+│   ├── QualityControlSignalsPage.tsx
+│   ├── ProductsPage.tsx
+│   ├── ProductCreatePage.tsx
+│   └── ProductEditPage.tsx
+│
+├── services/
+│   └── api.ts
+│
+├── types/
+│   ├── device.ts
+│   ├── alarms.ts
+│   ├── client.ts
+│   ├── plc.ts
+│   ├── logging.ts
+│   ├── timeTable.ts
+│   ├── group.ts
+│   ├── user.ts
+│   ├── classification.ts
+│   ├── customer.ts
+│   ├── efficiency.ts
+│   ├── qualityControl.ts
+│   └── product.ts
+│
+├── App.tsx
+└── index.tsx

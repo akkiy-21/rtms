@@ -1,0 +1,7 @@
+{
+  "serverIP": "172.18.1.100",
+  "serverPort": "8000",
+  "mqttBrokerIP": "172.18.1.100",
+  "mqttBrokerPort": "1883",
+  "mqttPublishInterval": 1000
+}

@@ -1,0 +1,12 @@
+{
+  "timestamp": "2025-12-11T08:13:31.457Z",
+  "totalBuildSize": 5284722,
+  "totalBuildSizeFormatted": "5.04 MB",
+  "localizationSize": 259216,
+  "localizationImpact": 4.905007302181647,
+  "estimatedLoadTime": 2.519951820373535,
+  "estimatedParseTime": 0.5039903640747071,
+  "recommendations": [
+    "バンドルサイズが大きいため、コード分割を検討"
+  ]
+}

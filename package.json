@@ -1,0 +1,25 @@
+{
+  "name": "rtms-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
+  "scripts": {
+    "frontend:start": "npm run start --workspace=frontend",
+    "frontend:build": "npm run build --workspace=frontend",
+    "frontend:test": "npm run test --workspace=frontend",
+    "backend:start": "cd backend && uv run uvicorn app.main:app --reload",
+    "backend:dev": "cd backend && uv run python run.py",
+    "mqtt:worker": "cd backend && uv run python -m app.mqtt_worker",
+    "client:start": "cd client && npm run start",
+    "client:build": "cd client && npm run make",
+    "client:package": "cd client && npm run package",
+    "bridge:start": "cd client-plc-bridge && uv run python main.py"
+  },
+  "description": "RTMS (Real-Time Monitoring System) モノレポ",
+  "keywords": ["rtms", "monitoring", "fastapi", "react"],
+  "author": "",
+  "license": "ISC"
+}
