@@ -1,7 +1,17 @@
+import os
 import json
+from uuid import uuid4
 from paho.mqtt import client as mqtt_client
+from paho.mqtt import publish as mqtt_publish
+from app import env  # noqa: F401
 from app.database import SessionLocal
 from datetime import datetime
+
+
+def get_mqtt_broker_config() -> tuple[str, int]:
+    host = os.getenv("MQTT_BROKER_HOST", "localhost")
+    port = int(os.getenv("MQTT_BROKER_PORT", "1883"))
+    return host, port
 
 class MQTTClient:
     def __init__(self):
@@ -101,12 +111,30 @@ class MQTTClient:
             "type": update_type,
             "timestamp": int(datetime.now().timestamp() * 1000)
         })
-        
-        result = self.client.publish(topic, payload, qos=1)
-        if result.rc == mqtt_client.MQTT_ERR_SUCCESS:
-            print(f"Update notification published successfully to {topic}")
-        else:
-            print(f"Failed to publish update notification to {topic}")
+
+        if self.client.is_connected():
+            result = self.client.publish(topic, payload, qos=1)
+            if result.rc == mqtt_client.MQTT_ERR_SUCCESS:
+                print(f"Update notification published successfully to {topic}")
+            else:
+                print(f"Failed to publish update notification to {topic}")
+            return
+
+        broker_host, broker_port = get_mqtt_broker_config()
+
+        try:
+            mqtt_publish.single(
+                topic,
+                payload,
+                qos=1,
+                retain=False,
+                hostname=broker_host,
+                port=broker_port,
+                client_id=f"rtms-api-publisher-{uuid4()}",
+            )
+            print(f"Update notification published via one-shot publisher to {topic}")
+        except Exception as exc:
+            print(f"Failed to publish update notification to {topic}: {exc}")
 
 # グローバル変数としてインスタンスを作成
 mqtt_client_instance = MQTTClient()

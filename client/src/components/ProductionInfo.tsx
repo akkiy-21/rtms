@@ -28,7 +28,7 @@ const ProductionInfo: React.FC<ProductionInfoProps> = ({
         <Box sx={{ mb: 2 }}>
           <Typography variant="subtitle2">基準タクトタイム</Typography>
           <Typography variant="h5" sx={{ pl: 2 }}>
-            {deviceConfig?.standard_cycle_time || 'N/A'}
+            {deviceConfig?.standard_cycle_time ?? 'N/A'}
             <Typography component="span" variant="body1" sx={{ ml: 0.5 }}>sec</Typography>
           </Typography>
         </Box>

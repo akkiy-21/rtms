@@ -11,8 +11,8 @@ from app.auth import require_admin_user, require_authenticated_user
 from app.database import SessionLocal, engine
 from app.services import user_service
 
-# MQTT クライアントは別プロセス (mqtt_worker.py) で管理されるため、
-# FastAPI からは初期化しない
+# MQTT の購読処理は別プロセス (mqtt_worker.py) で管理する。
+# FastAPI 側は更新通知 publish のみを行い、常駐クライアントは持たない。
 
 
 def ensure_initial_admin_user_exists() -> None:

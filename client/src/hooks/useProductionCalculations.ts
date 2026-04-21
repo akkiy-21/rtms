@@ -64,8 +64,8 @@ export const useProductionCalculations = (
     ngCount: 0
   });
 
-  const calculateOperationRate = useCallback((data: OperationRateData, standardCycleTime: number, totalRunTime: number) => {
-    if (totalRunTime === 0 || standardCycleTime === 0) {
+  const calculateOperationRate = useCallback((data: OperationRateData, standardCycleTime: number | null, totalRunTime: number) => {
+    if (totalRunTime === 0 || !standardCycleTime) {
       return 0;
     }
     const rate = (data.productionCount * standardCycleTime) / totalRunTime * 100;

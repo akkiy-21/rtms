@@ -18,6 +18,8 @@ import {
   getDeviceInfo
 } from './services/api';
 import { 
+  DeviceConfig,
+  DeviceInfo,
   TimeTable, 
   TimeTableData, 
   EfficiencyData, 
@@ -81,6 +83,7 @@ const AppContent: React.FC = () => {
 
   const lastUpdateTime = useRef<number>(Date.now());
   const currentStatus = useRef<string | null>(null);
+  const deviceConfigRef = useRef<DeviceConfig | null>(null);
 
   const [operationStatus, setOperationStatus] = useState<OperationStatus>({ status: "停止中", category: "停止ロス時間" });
   const lastStatusChangeTime = useRef<number>(Date.now());
@@ -171,6 +174,32 @@ const AppContent: React.FC = () => {
     isConfigConnected,
     isScriptReady,
   });
+
+  useEffect(() => {
+    deviceConfigRef.current = deviceConfig;
+  }, [deviceConfig]);
+
+  const persistDeviceConfig = useCallback(async (nextConfig: DeviceConfig) => {
+    deviceConfigRef.current = nextConfig;
+    setDeviceConfig(nextConfig);
+    await window.electronAPI.storeSet('deviceConfig', nextConfig);
+  }, [setDeviceConfig]);
+
+  const mergeDeviceInfoIntoConfig = useCallback((updatedDeviceInfo: DeviceInfo): DeviceConfig | null => {
+    const currentConfig = deviceConfigRef.current;
+    if (!currentConfig) {
+      return null;
+    }
+
+    return {
+      ...currentConfig,
+      mac_address: updatedDeviceInfo.mac_address,
+      name: updatedDeviceInfo.name,
+      last_known_ip_address: updatedDeviceInfo.last_known_ip_address,
+      ssh_username: updatedDeviceInfo.ssh_username,
+      standard_cycle_time: updatedDeviceInfo.standard_cycle_time,
+    };
+  }, []);
 
   useEffect(() => {
     console.log('🔍 エラー状態チェック:', { connectionError, mqttError, isLoading });
@@ -581,23 +610,25 @@ useEffect(() => {
     try {
       if (data.type === 'device_info') {
         const updatedDeviceInfo = await getDeviceInfo(serverIP, serverPort, deviceId);
-        setDeviceConfig(prevConfig => ({
-          ...prevConfig,
-          mac_address: updatedDeviceInfo.mac_address,
-          name: updatedDeviceInfo.name,
-          ssh_username: updatedDeviceInfo.ssh_username,
-          standard_cycle_time: updatedDeviceInfo.standard_cycle_time,
-        }));
+        const mergedConfig = mergeDeviceInfoIntoConfig(updatedDeviceInfo);
+
+        if (!mergedConfig) {
+          console.warn('Skipped device_info update because deviceConfig is not initialized yet.');
+          return;
+        }
+
+        await persistDeviceConfig(mergedConfig);
         
         console.log('Device configuration updated:', {
           mac_address: updatedDeviceInfo.mac_address,
           name: updatedDeviceInfo.name,
+          last_known_ip_address: updatedDeviceInfo.last_known_ip_address,
           ssh_username: updatedDeviceInfo.ssh_username,
           standard_cycle_time: updatedDeviceInfo.standard_cycle_time,
         });
       } else if (data.type === 'plc_config') {
         const updatedConfig = await getDeviceConfig(serverIP, serverPort, selectedMac);
-        setDeviceConfig(updatedConfig);
+        await persistDeviceConfig(updatedConfig);
         
         if (isConfigConnected) {
           try {
@@ -633,7 +664,7 @@ useEffect(() => {
   return () => {
     window.electronAPI.removeListener('mqtt-update-notification', handleMqttUpdate);
   };
-}, [deviceId, serverIP, serverPort, selectedMac, isConfigConnected]);
+}, [deviceId, serverIP, serverPort, selectedMac, isConfigConnected, mergeDeviceInfoIntoConfig, persistDeviceConfig]);
 
   useEffect(() => {
     setDisplayData({

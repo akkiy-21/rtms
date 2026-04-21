@@ -8,7 +8,7 @@ MQTT メッセージを受信してデータベースに直接書き込む独立
 import signal
 import sys
 import time
-from app.mqtt_client import get_mqtt_client
+from app.mqtt_client import get_mqtt_broker_config, get_mqtt_client
 from app.database import SessionLocal
 from app.services import device_service
 
@@ -45,9 +45,11 @@ def main():
     mqtt_client = get_mqtt_client()
     
     try:
+        broker_host, broker_port = get_mqtt_broker_config()
+
         # MQTT ブローカーに接続
-        print("Connecting to MQTT broker at localhost:1883...")
-        mqtt_client.connect("localhost", 1883)
+        print(f"Connecting to MQTT broker at {broker_host}:{broker_port}...")
+        mqtt_client.connect(broker_host, broker_port)
         
         # データベースから全デバイスを取得してサブスクライブ
         print("Loading devices from database...")

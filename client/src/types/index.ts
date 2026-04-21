@@ -5,7 +5,7 @@ export interface DeviceConfig {
     name: string;
     last_known_ip_address?: string | null;
     ssh_username?: string | null;
-    standard_cycle_time: number;
+  standard_cycle_time: number | null;
     alarm_groups: any[]; // 必要に応じて詳細な型を定義
     efficiency_addresses: any[]; // 必要に応じて詳細な型を定義
     logging_settings: any[]; // 必要に応じて詳細な型を定義

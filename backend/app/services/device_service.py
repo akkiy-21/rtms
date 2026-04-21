@@ -22,15 +22,11 @@ from ..schemas import (
 from ..models import Devices, EfficiencyAddresses
 from app.mqtt_client import get_mqtt_client
 
-# ファイルの先頭に以下の行を追加
 mqtt_client = get_mqtt_client()
-print("MQTT client in device_service.py:", mqtt_client)
 
 def register_device(db: Session, registration: DeviceRegistration) -> Optional[DeviceOut]:
     try:
         device = device_crud.create_device(db, registration)
-        print("MQTT client in register_device:", mqtt_client)
-        print("MQTT client type:", type(mqtt_client))
         if device.device_status == 'active':
             mqtt_client.add_device(device.id, device.mac_address)
         return DeviceOut.model_validate(device)
