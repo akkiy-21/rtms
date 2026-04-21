@@ -18,6 +18,7 @@ class TempIDResponse(BaseModel):
 class DeviceRegistration(BaseModel):
     mac_address: str
     name: str
+    device_status: str = 'active'
     ssh_username: Optional[str] = Field(None, description="SSH login username")
     ssh_password: Optional[str] = Field(None, description="SSH login password")
     standard_cycle_time: Optional[float] = Field(None, description="Standard cycle time in seconds")
@@ -25,6 +26,7 @@ class DeviceRegistration(BaseModel):
 class DeviceUpdate(BaseModel):
     mac_address: Optional[str] = None
     name: Optional[str] = None
+    device_status: Optional[str] = None
     ssh_username: Optional[str] = None
     ssh_password: Optional[str] = None
     standard_cycle_time: Optional[float] = None
@@ -37,6 +39,64 @@ class DeviceRuntimeNetworkInfo(BaseModel):
     last_known_ip_address: str
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class PairingRequestStatus(str, Enum):
+    PENDING = "pending"
+    CONFIRMED = "confirmed"
+    CONSUMED = "consumed"
+    REGISTERED = "registered"
+
+
+class ClientPairingStatus(str, Enum):
+    PENDING = "pending"
+    CONFIRMED = "confirmed"
+    DRAFT = "draft"
+    REGISTERED = "registered"
+
+
+class PairingCodeRequest(BaseModel):
+    mac_address: str
+
+    @field_validator('mac_address')
+    def validate_mac_address(cls, v):
+        normalized = v.strip().lower()
+        if not normalized:
+            raise ValueError('mac_address is required')
+        if not __import__('re').match(r'^([0-9a-f]{2}[:-]){5}([0-9a-f]{2})$', normalized):
+            raise ValueError('Invalid MAC address format')
+        return normalized
+
+
+class ClientPairingCodeResponse(BaseModel):
+    status: ClientPairingStatus
+    pairing_code: Optional[str] = None
+    expires_at: Optional[datetime] = None
+    refresh_interval_seconds: int
+    poll_interval_seconds: int
+
+
+class PairingLookupResponse(BaseModel):
+    pairing_code: str
+    mac_address: str
+    expires_at: datetime
+    status: PairingRequestStatus
+
+
+class DeviceRegistrationByPairing(BaseModel):
+    pairing_code: Annotated[str, Field(min_length=4, max_length=4, pattern=r'^\d{4}$')]
+    name: str
+    ssh_username: Optional[str] = Field(None, description="SSH login username")
+    ssh_password: Optional[str] = Field(None, description="SSH login password")
+    standard_cycle_time: Optional[float] = Field(None, description="Standard cycle time in seconds")
+
+
+class DraftDeviceRegistrationByPairing(BaseModel):
+    pairing_code: Annotated[str, Field(min_length=4, max_length=4, pattern=r'^\d{4}$')]
+
+
+class DeviceReassignmentByPairing(BaseModel):
+    pairing_code: Annotated[str, Field(min_length=4, max_length=4, pattern=r'^\d{4}$')]
 
 # classifications
 class ClassificationGroupBase(BaseModel):
@@ -182,7 +242,6 @@ class ProductWithCustomer(ProductBase):
 
 # users
 class UserRole(str, Enum):
-    SU = "SU"   # Super User
     AD = "AD"   # Admin User
     CU = "CU"   # Common User
 
@@ -194,20 +253,39 @@ class UserCreate(BaseModel):
     id: Annotated[str, Field(min_length=1, max_length=10, pattern=r'^[a-zA-Z0-9]+$')]
     name: str
     role: UserRole
-    password: str | None = None
 
 class UserUpdate(BaseModel):
     name: Optional[str] = None
     role: Optional[UserRole] = None
-    password: Optional[str] = None
 
 class User(BaseModel):
     id: str
     name: str
     role: UserRole
+    password_change_required: bool = False
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
+
+
+class UserCreateResult(BaseModel):
+    user: User
+    temporary_password: str
+
+
+class LoginRequest(BaseModel):
+    user_id: Annotated[str, Field(min_length=1, max_length=10, pattern=r'^[a-zA-Z0-9]+$')]
+    password: Annotated[str, Field(min_length=1, max_length=128)]
+
+
+class LoginResponse(BaseModel):
+    access_token: str
+    token_type: str
+    user: User
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: Annotated[str, Field(min_length=1, max_length=128)]
+    new_password: Annotated[str, Field(min_length=8, max_length=128)]
 
 User.model_rebuild()
 
@@ -228,6 +306,7 @@ class DeviceOut(BaseModel):
     id: int
     mac_address: str
     name: str
+    device_status: str = 'active'
     last_known_ip_address: str | None = None
     ssh_username: str | None = None
     ssh_password: str | None = None

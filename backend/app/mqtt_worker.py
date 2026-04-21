@@ -53,7 +53,7 @@ def main():
         print("Loading devices from database...")
         db = SessionLocal()
         try:
-            devices = device_service.get_devices(db)
+            devices = device_service.get_devices(db, device_status='active')
             print(f"Found {len(devices)} device(s)")
             
             for device in devices:

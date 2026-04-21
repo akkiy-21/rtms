@@ -1,12 +1,12 @@
 // api.ts
 import axios from 'axios';
-import { Device, DeviceFormData } from '../types/device';
+import { Device, DeviceFormData, PairingDeviceRegistrationData, PairingDeviceReassignmentData, PairingInfo } from '../types/device';
 import { Classification, ClassificationGroup, ClassificationUpdate } from '../types/classification';
-import { PLCFormDataWithAddressRanges, PLCWithAddressRanges, AddressRange } from '../types/plc';
+import { PLCFormDataWithAddressRanges, PLCWithAddressRanges } from '../types/plc';
 import { TimeTable, TimeTableRequest } from '../types/timeTable';
 import { Customer, CustomerFormData } from '../types/customer';
 import { Product, ProductFormData, ProductWithCustomer } from '../types/product';
-import { User, UserFormData } from '../types/user';
+import { ChangePasswordFormData, LoginRequestData, LoginResponseData, User, UserCreateResult, UserFormData } from '../types/user';
 import { Client, ClientFormData } from '../types/client';
 import { EfficiencyAddress } from '../types/efficiency';
 import { EfficiencyAddressFormData } from '../components/features/efficiency/efficiency-address-form-schema';
@@ -22,12 +22,37 @@ import {
   AlarmParseRuleFormData,
 } from '../types/alarm';
 import { LoggingSetting, LoggingSettingFormData, LoggingDataSettingFormData, LoggingDataSetting } from '../types/logging';
-import { QualityControlSignal, QualityControlSignalFormData, QualityControlSignalCreateData, QualityControlSignalUpdateData } from '../types/qualityControl';
+import { QualityControlSignal, QualityControlSignalCreateData, QualityControlSignalUpdateData } from '../types/qualityControl';
 import { DeviceProductAssociation } from '../types/deviceProductAssociation';
 
 
 // 開発環境では localhost、本番環境では環境変数から取得
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000'; 
+const AUTH_TOKEN_STORAGE_KEY = 'rtms.auth.token';
+
+export const setAuthToken = (token: string | null): void => {
+  if (token) {
+    axios.defaults.headers.common.Authorization = `Bearer ${token}`;
+    return;
+  }
+
+  delete axios.defaults.headers.common.Authorization;
+};
+
+export const login = async (credentials: LoginRequestData): Promise<LoginResponseData> => {
+  const response = await axios.post(`${API_BASE_URL}/auth/login`, credentials);
+  return response.data;
+};
+
+export const getCurrentUser = async (): Promise<User> => {
+  const response = await axios.get(`${API_BASE_URL}/auth/me`);
+  return response.data;
+};
+
+export const changePassword = async (payload: ChangePasswordFormData): Promise<User> => {
+  const response = await axios.post(`${API_BASE_URL}/auth/change-password`, payload);
+  return response.data;
+};
 
 // device
 export const getDevices = async (): Promise<Device[]> => {
@@ -62,6 +87,50 @@ export const updateDevice = async (id: number, deviceData: Partial<DeviceFormDat
     console.error('Error updating device:', error);
     throw error;
   }
+};
+
+export const getPairingByCode = async (pairingCode: string): Promise<PairingInfo> => {
+  const response = await axios.get(`${API_BASE_URL}/pairings/code/${pairingCode}`);
+  return response.data;
+};
+
+export const confirmPairingByCode = async (pairingCode: string): Promise<PairingInfo> => {
+  const response = await axios.post(`${API_BASE_URL}/pairings/code/${pairingCode}/confirm`);
+  return response.data;
+};
+
+export const createDraftDeviceFromPairing = async (pairingCode: string): Promise<Device> => {
+  const response = await axios.post(`${API_BASE_URL}/pairings/draft-device`, { pairing_code: pairingCode });
+  return response.data;
+};
+
+export const releasePairingByCode = async (pairingCode: string): Promise<void> => {
+  await axios.post(`${API_BASE_URL}/pairings/code/${pairingCode}/release`);
+};
+
+export const releasePairingByCodeKeepalive = (pairingCode: string): void => {
+  const token = localStorage.getItem(AUTH_TOKEN_STORAGE_KEY);
+  if (!token) {
+    return;
+  }
+
+  void fetch(`${API_BASE_URL}/pairings/code/${pairingCode}/release`, {
+    method: 'POST',
+    keepalive: true,
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+};
+
+export const createDeviceFromPairing = async (payload: PairingDeviceRegistrationData): Promise<Device> => {
+  const response = await axios.post(`${API_BASE_URL}/pairings/register-device`, payload);
+  return response.data;
+};
+
+export const reassignDeviceByPairing = async (deviceId: number, payload: PairingDeviceReassignmentData): Promise<Device> => {
+  const response = await axios.post(`${API_BASE_URL}/pairings/reassign-device/${deviceId}`, payload);
+  return response.data;
 };
 
 export const deleteDevice = async (id: number): Promise<void> => {
@@ -195,7 +264,7 @@ export const getUser = async (id: string): Promise<User> => {
   return response.data;
 };
 
-export const createUser = async (userData: UserFormData): Promise<User> => {
+export const createUser = async (userData: UserFormData): Promise<UserCreateResult> => {
   const response = await axios.post(`${API_BASE_URL}/users`, userData);
   return response.data;
 };

@@ -34,7 +34,7 @@ class MQTTClient:
     def process_data(self, mac_address, data):
         from app.services import device_service, data_service  # Import here to avoid circular import
         with SessionLocal() as db:
-            device = device_service.get_device_by_mac(db, mac_address)
+            device = device_service.get_device_by_mac(db, mac_address, device_status='active')
             if device:
                 data_type = data.get('name')
                 event_time = data.get('timestamp') / 1000

@@ -86,7 +86,19 @@ cd backend
 uv sync
 ```
 
-### 2.1. shadcn/ui の初期セットアップ（初回のみ）
+### 2.1. 環境変数の準備
+
+プロジェクトルートの .env.example を .env にコピーし、少なくとも以下を設定してください。
+
+```bash
+RTMS_JWT_SECRET=十分に長いランダム文字列
+RTMS_INITIAL_ADMIN_ID=admin
+RTMS_INITIAL_ADMIN_PASSWORD=初期管理者パスワード
+```
+
+backend は起動時、Alembic 実行時、init_db 実行時にプロジェクトルートの .env を自動で読み込みます。
+
+### 2.2. shadcn/ui の初期セットアップ（初回のみ）
 
 shadcn/ui は既に設定済みですが、新しいコンポーネントを追加する場合は以下のコマンドを使用します：
 
@@ -110,6 +122,8 @@ uv run python -m app.init_db
 # 既存データを削除して再初期化する場合
 uv run python -m app.init_db --drop
 ```
+
+初期管理者は .env の RTMS_INITIAL_ADMIN_ID と RTMS_INITIAL_ADMIN_PASSWORD から作成されます。未設定の場合、初期化は失敗します。
 
 ### 4. 開発サーバーの起動
 

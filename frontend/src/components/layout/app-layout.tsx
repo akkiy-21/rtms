@@ -2,9 +2,12 @@ import React, { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Menu, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
+import { useAuth } from '@/contexts/AuthContext';
 import { Sidebar } from './sidebar';
 import { NAVIGATION_LABELS } from '@/localization/constants/navigation-labels';
+import { USER_LABELS } from '@/localization/constants/user-labels';
 import { ACTION_LABELS } from '@/localization/constants/action-labels';
 
 interface AppLayoutProps {
@@ -30,6 +33,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
+  const { user, logout } = useAuth();
 
   /**
    * 現在のパスから親階層のパスを取得する
@@ -134,6 +138,11 @@ export function AppLayout({ children }: AppLayoutProps) {
     navigate(parentPath);
   };
 
+  const handleLogout = () => {
+    logout();
+    navigate('/login', { replace: true });
+  };
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -163,6 +172,15 @@ export function AppLayout({ children }: AppLayoutProps) {
           <div className="flex-1">
             <h2 className="text-lg font-semibold">RTMS - {NAVIGATION_LABELS.DEVICE_MANAGEMENT}</h2>
           </div>
+          {user && (
+            <div className="flex items-center gap-2">
+              <Badge variant="outline">{USER_LABELS.ROLES[user.role]}</Badge>
+              <span className="hidden text-sm text-muted-foreground md:inline">{user.name}</span>
+              <Button variant="outline" size="sm" onClick={handleLogout}>
+                ログアウト
+              </Button>
+            </div>
+          )}
         </div>
       </header>
 

@@ -6,6 +6,7 @@ import { ColumnDef } from '@tanstack/react-table';
 import { Device } from '@/types/device';
 import { DataTableColumnHeader } from '@/components/common/data-table-column-header';
 import { ActionButtons } from '@/components/common/action-buttons';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Eye, EyeOff, Settings } from 'lucide-react';
 import { DEVICE_LABELS } from '@/localization/constants/device-labels';
@@ -51,6 +52,16 @@ export const createDeviceColumns = (
       header: ({ column }) => (
         <DataTableColumnHeader column={column} title={TECHNICAL_TERMS.MAC_ADDRESS} />
       ),
+    },
+    {
+      accessorKey: 'device_status',
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title={DEVICE_LABELS.TABLE.HEADERS.STATUS} />
+      ),
+      cell: ({ row }) => {
+        const value = row.getValue('device_status') as Device['device_status'];
+        return <Badge variant={value === 'draft' ? 'outline' : 'secondary'}>{value === 'draft' ? DEVICE_LABELS.STATUS.DRAFT : DEVICE_LABELS.STATUS.ACTIVE}</Badge>;
+      },
     },
     {
       accessorKey: 'last_known_ip_address',
@@ -101,14 +112,14 @@ export const createDeviceColumns = (
           <ActionButtons
             onEdit={() => onEdit(device.id)}
             onDelete={() => onDelete(device.id)}
-            customActions={[
+            customActions={device.device_status === 'active' ? [
               {
                 label: DEVICE_LABELS.ACTIONS.DETAIL_SETTINGS,
                 onClick: () => onDetailSettings(device.id),
                 variant: 'ghost',
                 icon: <Settings className="h-4 w-4" />,
               },
-            ]}
+            ] : []}
           />
         );
       },

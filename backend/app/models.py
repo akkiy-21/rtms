@@ -30,6 +30,11 @@ class SignalType(enum.Enum):
     Ng = "Ng"
     Optional = "Optional"
 
+
+class DeviceStatus(enum.Enum):
+    DRAFT = "draft"
+    ACTIVE = "active"
+
 class CodeType(enum.Enum):
     ProductNumber = "ProductNumber"   # 製品品番
 
@@ -45,8 +50,9 @@ class Users(Base):
     __tablename__ = 'users'
     id = Column(String(10), primary_key=True)
     name = Column(String(100))
-    password = Column(String(50), nullable=True)
+    password = Column(String(255), nullable=True)
     role = Column(Enum(UserRole), nullable=False)
+    first_login_password_change_required = Column(Boolean, nullable=False, default=False, server_default='false')
 
     def __repr__(self):
         return "<User(name='%s', role='%s')>" % (self.name, self.role.name)
@@ -93,6 +99,7 @@ class Devices(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     mac_address = Column(String(17), unique=True, index=True)
     name = Column(String(100))
+    device_status = Column(String(20), nullable=False, default=DeviceStatus.ACTIVE.value, server_default=DeviceStatus.ACTIVE.value)
     last_known_ip_address = Column(String(45), nullable=True)
     ssh_username = Column(String(100), nullable=True)
     ssh_password = Column(String(255), nullable=True)
@@ -116,6 +123,21 @@ class Devices(Base):
 
     def __repr__(self):
         return f"<Device(id={self.id}, mac_address='{self.mac_address}', name='{self.name}')>"
+
+
+class PairingRequests(Base):
+    __tablename__ = 'pairing_requests'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    mac_address = Column(String(17), nullable=False, unique=True, index=True)
+    pairing_code = Column(String(4), nullable=True, index=True)
+    status = Column(String(20), nullable=False, default='pending', server_default='pending')
+    expires_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow, server_default='CURRENT_TIMESTAMP')
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow, server_default='CURRENT_TIMESTAMP')
+
+    def __repr__(self):
+        return f"<PairingRequest(id={self.id}, mac_address='{self.mac_address}', pairing_code='{self.pairing_code}', status='{self.status}')>"
 
 class EfficiencyAddresses(Base):
     __tablename__ = 'efficiency_addresses'

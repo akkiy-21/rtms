@@ -6,6 +6,11 @@
  */
 
 export const DATE_FORMATTER = {
+  parseBackendDateTime: (value: string): Date => {
+    const normalized = /(?:Z|[+-]\d{2}:\d{2})$/.test(value) ? value : `${value}Z`;
+    return new Date(normalized);
+  },
+
   /**
    * 日付フォーマット - YYYY/MM/DD形式
    * Requirement 9.1: 日付が表示される場合、「YYYY年MM月DD日」または「YYYY/MM/DD」形式を使用する
@@ -184,7 +189,7 @@ export const DATE_FORMATTER = {
    * Requirement 9.5: タイムゾーンを考慮した日時表示
    */
   formatISOStringToJST: (isoString: string): string => {
-    const date = new Date(isoString);
+    const date = DATE_FORMATTER.parseBackendDateTime(isoString);
     return DATE_FORMATTER.formatDateTime(date);
   },
 

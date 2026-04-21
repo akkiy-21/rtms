@@ -20,6 +20,7 @@ def create_device(db: Session, registration: DeviceRegistration) -> Devices:
     db_device = Devices(
         mac_address=registration.mac_address,
         name=registration.name,
+        device_status=registration.device_status,
         ssh_username=registration.ssh_username,
         ssh_password=registration.ssh_password,
         standard_cycle_time=registration.standard_cycle_time,
@@ -29,8 +30,11 @@ def create_device(db: Session, registration: DeviceRegistration) -> Devices:
     db.refresh(db_device)
     return db_device
 
-def get_devices(db: Session) -> List[Devices]:
-    return db.query(Devices).all()
+def get_devices(db: Session, device_status: str | None = None) -> List[Devices]:
+    query = db.query(Devices)
+    if device_status is not None:
+        query = query.filter(Devices.device_status == device_status)
+    return query.all()
 
 def get_device(db: Session, device_id: int) -> Optional[Devices]:
     return db.query(Devices).filter(Devices.id == device_id).first()
@@ -56,11 +60,19 @@ def update_device(db: Session, device_id: int, device_update: DeviceUpdate) -> O
         'id': db_device.id,
         'mac_address': db_device.mac_address,
         'name': db_device.name,
+        'device_status': db_device.device_status,
         'last_known_ip_address': db_device.last_known_ip_address,
         'ssh_username': db_device.ssh_username,
         'ssh_password': db_device.ssh_password,
         'standard_cycle_time': db_device.standard_cycle_time,
     }
+
+
+def get_device_by_mac(db: Session, mac_address: str, device_status: str | None = None) -> Optional[Devices]:
+    query = db.query(Devices).filter(Devices.mac_address == mac_address)
+    if device_status is not None:
+        query = query.filter(Devices.device_status == device_status)
+    return query.first()
 
 def update_device_runtime_network(db: Session, device_id: int, last_known_ip_address: str) -> Optional[Devices]:
     db_device = db.query(Devices).filter(Devices.id == device_id).first()
@@ -512,7 +524,7 @@ def get_device_products_with_details(db: Session, device_id: int):
     ).all()
 
 def get_device_full_info(db: Session, mac_address: str) -> Optional[Devices]:
-    return db.query(Devices).filter(Devices.mac_address == mac_address).options(
+    return db.query(Devices).filter(Devices.mac_address == mac_address, Devices.device_status == 'active').options(
         joinedload(Devices.clients).joinedload(Clients.plc),
         joinedload(Devices.alarm_groups).joinedload(AlarmGroups.alarm_addresses).joinedload(AlarmAddresses.alarm_comments),
         joinedload(Devices.quality_control_signals),

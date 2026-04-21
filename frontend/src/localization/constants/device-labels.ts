@@ -69,6 +69,8 @@ export const DEVICE_LABELS = {
   
   // デバイスステータス（将来的な拡張用）
   STATUS: {
+    DRAFT: '仮登録',
+    ACTIVE: '本登録',
     ONLINE: 'オンライン',
     OFFLINE: 'オフライン',
     ERROR: 'エラー',

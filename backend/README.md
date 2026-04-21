@@ -12,3 +12,5 @@ Notes:
 
 - app/init_db.py creates tables from the current SQLAlchemy models, seeds initial data, and stamps the database to the current Alembic head.
 - Existing databases should be migrated with Alembic rather than the legacy one-off migration scripts.
+- Root .env and backend/.env are loaded automatically.
+- Set RTMS_INITIAL_ADMIN_ID and RTMS_INITIAL_ADMIN_PASSWORD before running app/init_db.py on a fresh database.

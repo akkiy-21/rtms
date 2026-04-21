@@ -7,9 +7,12 @@ import {
   DeviceNotFoundError,
   ServerConnectionError,
   findBestAdapter,
+  requestPairingCode,
   updateDeviceRuntimeNetwork,
 } from '../services/api';
-import type { DeviceConfig, TimeTable } from '../types';
+import type { DeviceConfig, PairingCodeResponse, TimeTable } from '../types';
+
+type PairingDisplayStatus = PairingCodeResponse['status'] | null;
 
 export type UseDeviceSetupParams = {
   loadSettings: () => Promise<void>;
@@ -37,6 +40,47 @@ export const useDeviceSetup = ({
   const [selectedMac, setSelectedMac] = useState('');
   const [macAddresses, setMacAddresses] = useState<Systeminformation.NetworkInterfacesData[]>([]);
   const [mqttError, setMqttError] = useState(false);
+  const [pairingStatus, setPairingStatus] = useState<PairingDisplayStatus>(null);
+  const [pairingCode, setPairingCode] = useState<string | null>(null);
+  const [pairingCodeExpiresAt, setPairingCodeExpiresAt] = useState<string | null>(null);
+  const [pairingRefreshIntervalSeconds, setPairingRefreshIntervalSeconds] = useState(30);
+  const [pairingPollIntervalSeconds, setPairingPollIntervalSeconds] = useState(1);
+  const [pendingRegisteredInitialization, setPendingRegisteredInitialization] = useState(false);
+
+  const clearPairingState = useCallback(() => {
+    setPairingStatus(null);
+    setPairingCode(null);
+    setPairingCodeExpiresAt(null);
+  }, []);
+
+  const refreshPairingCode = useCallback(async () => {
+    if (!selectedMac) {
+      clearPairingState();
+      return;
+    }
+
+    const serverAddress = await window.electronAPI.storeGet('serverIP');
+    const serverPort = await window.electronAPI.storeGet('serverPort');
+    if (!serverAddress || !serverPort) {
+      clearPairingState();
+      return;
+    }
+
+    const response = await requestPairingCode(serverAddress, serverPort, selectedMac);
+    setPairingRefreshIntervalSeconds(response.refresh_interval_seconds || 30);
+    setPairingPollIntervalSeconds(response.poll_interval_seconds || 1);
+
+    if (response.status === 'registered') {
+      clearPairingState();
+      setConnectionError(null);
+      setPendingRegisteredInitialization(true);
+      return;
+    }
+
+    setPairingStatus(response.status);
+    setPairingCode(response.status === 'pending' ? response.pairing_code ?? null : null);
+    setPairingCodeExpiresAt(response.status === 'pending' ? response.expires_at ?? null : null);
+  }, [clearPairingState, selectedMac]);
 
   const initializeApp = useCallback(async () => {
     setIsLoading(true);
@@ -95,6 +139,7 @@ export const useDeviceSetup = ({
         setDeviceConfig(config);
         await window.electronAPI.storeSet('deviceConfig', config);
         setConnectionError(null);
+        clearPairingState();
 
         // デバイスIDを設定
         if (config && config.id) {
@@ -158,12 +203,14 @@ export const useDeviceSetup = ({
         } else if (error instanceof DeviceNotFoundError) {
           console.error('エラータイプ: DeviceNotFoundError - MACアドレスは保持します');
           // MACアドレスはクリアせず、bestMacを保持
+          clearPairingState();
           setConnectionError('device');
         } else {
           console.error('エラータイプ: Unknown error - MACアドレスをクリアします');
           setSelectedMac('');
           await window.electronAPI.storeSet('selectedMac', '');
           setConnectionError('connection');
+          clearPairingState();
           console.error('Unknown error:', error);
         }
         console.log('ConnectionErrorダイアログを表示します。エラータイプ:', connectionError);
@@ -177,10 +224,12 @@ export const useDeviceSetup = ({
       await window.electronAPI.storeSet('selectedMac', '');
 
       setConnectionError('connection');
+      clearPairingState();
     } finally {
       setIsLoading(false);
     }
   }, [
+    clearPairingState,
     getCurrentTimeTableId,
     isConfigConnected,
     isScriptReady,
@@ -196,6 +245,15 @@ export const useDeviceSetup = ({
       initializeApp();
     }
   }, [initializeApp, isScriptReady, isConfigConnected]);
+
+  useEffect(() => {
+    if (!pendingRegisteredInitialization || !isScriptReady || !isConfigConnected) {
+      return;
+    }
+
+    setPendingRegisteredInitialization(false);
+    void initializeApp();
+  }, [initializeApp, isConfigConnected, isScriptReady, pendingRegisteredInitialization]);
 
   useEffect(() => {
     const handleMqttStatus = (status: string) => {
@@ -224,6 +282,40 @@ export const useDeviceSetup = ({
     return window.electronAPI.onBridgeRestartStarted(handleBridgeRestartStarted);
   }, []);
 
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let cancelled = false;
+
+    const scheduleRefresh = async () => {
+      if (cancelled || connectionError !== 'device' || !selectedMac) {
+        return;
+      }
+
+      try {
+        await refreshPairingCode();
+      } catch (error) {
+        console.warn('ペアリングコードの更新に失敗しました', error);
+      }
+
+      if (!cancelled) {
+        timer = setTimeout(scheduleRefresh, pairingPollIntervalSeconds * 1000);
+      }
+    };
+
+    if (connectionError === 'device' && selectedMac) {
+      scheduleRefresh();
+    } else {
+      clearPairingState();
+    }
+
+    return () => {
+      cancelled = true;
+      if (timer) {
+        clearTimeout(timer);
+      }
+    };
+  }, [clearPairingState, connectionError, pairingPollIntervalSeconds, refreshPairingCode, selectedMac]);
+
   return {
     isLoading,
     loadingMessage,
@@ -235,6 +327,11 @@ export const useDeviceSetup = ({
     setSelectedMac,
     macAddresses,
     mqttError,
+    pairingStatus,
+    pairingCode,
+    pairingCodeExpiresAt,
+    pairingRefreshIntervalSeconds,
+    pairingPollIntervalSeconds,
     initializeApp,
   };
 };

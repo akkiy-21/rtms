@@ -1,6 +1,6 @@
 // services/api.ts
 import axios, { AxiosError } from 'axios';
-import { DeviceConfig, TimeTable, DeviceInfo, SelectedAdapter } from '../types';
+import { DeviceConfig, TimeTable, DeviceInfo, PairingCodeResponse, SelectedAdapter } from '../types';
 
 export class DeviceNotFoundError extends Error {
   constructor(message: string) {
@@ -213,6 +213,32 @@ export const getTimeTables = async (
     } else {
       throw new ServerConnectionError(`Failed to connect to server: ${error.message}`);
     }
+  }
+
+  return result.data;
+};
+
+export const requestPairingCode = async (
+  serverAddress: string,
+  serverPort: string,
+  macAddress: string
+): Promise<PairingCodeResponse> => {
+  const result = await window.electronAPI.httpRequest({
+    method: 'post',
+    url: '/pairings/request',
+    baseURL: `http://${serverAddress}:${serverPort}`,
+    data: {
+      mac_address: macAddress,
+    },
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    timeout: 10000,
+  });
+
+  if ('error' in result) {
+    const error = result.error;
+    throw new ServerConnectionError(`Failed to request pairing code: ${error.message}`);
   }
 
   return result.data;

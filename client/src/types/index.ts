@@ -100,6 +100,14 @@ export interface SelectedAdapter {
   ipAddress: string | null;
 }
 
+export interface PairingCodeResponse {
+  status: 'pending' | 'confirmed' | 'draft' | 'registered';
+  pairing_code?: string | null;
+  expires_at?: string | null;
+  refresh_interval_seconds: number;
+  poll_interval_seconds: number;
+}
+
 // ネットワーク設定関連の型定義
 export interface NetworkAdapter {
   name: string;           // インターフェース名（例: "Wi-Fi", "Ethernet", "wlan0", "eth0"）

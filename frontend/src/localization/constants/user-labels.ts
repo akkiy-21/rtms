@@ -10,14 +10,12 @@
 export const USER_LABELS = {
   // ユーザーロール（コード -> 日本語ラベル）
   ROLES: {
-    SU: 'スーパーユーザー',
     AD: '管理者',
     CU: '一般ユーザー',
   },
   
   // ユーザーロール（フルネーム）
   ROLE_DESCRIPTIONS: {
-    SU: 'スーパーユーザー',
     AD: '管理者ユーザー',
     CU: '一般ユーザー',
   },
@@ -61,12 +59,11 @@ export const USER_LABELS = {
     ID: '英数字10文字以内で入力してください',
     NAME: '100文字以内で入力してください',
     ROLE: 'ユーザーの権限レベルを選択してください',
-    PASSWORD: 'スーパーユーザーと管理者には必須です',
+    PASSWORD: '初回ログイン時に変更されます',
     PASSWORD_POLICY: '8文字以上の英数字を含むパスワードを設定してください',
     ROLE_PERMISSIONS: {
-      SU: 'システム全体の管理権限を持ちます',
       AD: '管理機能へのアクセス権限を持ちます',
-      CU: '基本的な機能のみ利用できます',
+      CU: 'ダッシュボードとデータダウンロードのみ利用できます',
     },
   },
   
@@ -97,7 +94,7 @@ export const USER_LABELS = {
     UPDATE_SUCCESS: 'ユーザーを更新しました',
     DELETE_SUCCESS: 'ユーザーを削除しました',
     DELETE_CONFIRM: 'このユーザーを削除してもよろしいですか？',
-    PASSWORD_REQUIRED: 'スーパーユーザーと管理者ユーザーにはパスワードが必要です',
+    PASSWORD_REQUIRED: '作成後に仮パスワードが発行されます',
     ROLE_CHANGED: 'ユーザーロールを変更しました',
     STATUS_CHANGED: 'ユーザーステータスを変更しました',
   },
@@ -139,7 +136,7 @@ export const USER_LABELS = {
     NAME_REQUIRED: '名前は必須です',
     NAME_MAX_LENGTH: '名前は100文字以内で入力してください',
     ROLE_REQUIRED: 'ロールを選択してください',
-    PASSWORD_REQUIRED_FOR_ADMIN: 'スーパーユーザーと管理者ユーザーにはパスワードが必要です',
+    PASSWORD_REQUIRED_FOR_ADMIN: 'ユーザー作成後に仮パスワードが発行されます',
     EMAIL_INVALID: '正しいメールアドレスを入力してください',
     PHONE_INVALID: '正しい電話番号を入力してください',
   },

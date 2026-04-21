@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { userFormSchema, UserFormData } from './features/users/user-form-schema';
@@ -33,21 +33,9 @@ const UserForm: React.FC<UserFormProps> = ({ initialData, onSubmit, children }) 
       id: '',
       name: '',
       role: 'CU',
-      password: '',
       ...initialData,
     },
   });
-
-  // ロールの変更を監視してパスワードフィールドの表示を制御
-  const role = form.watch('role');
-  const showPasswordField = role !== 'CU';
-
-  // ロールがCUに変更された場合、パスワードをクリア
-  useEffect(() => {
-    if (role === 'CU') {
-      form.setValue('password', '');
-    }
-  }, [role, form]);
 
   const handleSubmit = (data: UserFormData) => {
     onSubmit(data);
@@ -97,7 +85,6 @@ const UserForm: React.FC<UserFormProps> = ({ initialData, onSubmit, children }) 
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value="SU">{USER_LABELS.ROLE_DESCRIPTIONS.SU}</SelectItem>
                   <SelectItem value="AD">{USER_LABELS.ROLE_DESCRIPTIONS.AD}</SelectItem>
                   <SelectItem value="CU">{USER_LABELS.ROLE_DESCRIPTIONS.CU}</SelectItem>
                 </SelectContent>
@@ -106,22 +93,6 @@ const UserForm: React.FC<UserFormProps> = ({ initialData, onSubmit, children }) 
             </FormItem>
           )}
         />
-
-        {showPasswordField && (
-          <FormField
-            control={form.control}
-            name="password"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>{USER_LABELS.FIELDS.PASSWORD}</FormLabel>
-                <FormControl>
-                  <Input type="password" placeholder={USER_LABELS.PLACEHOLDERS.PASSWORD} {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        )}
 
         {children}
       </form>

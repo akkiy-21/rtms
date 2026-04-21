@@ -10,6 +10,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 from app.database import engine, Base, SQLALCHEMY_DATABASE_URL
 from app.services import alarm_parse_rule_service
+from app.services import user_service
 # 全モデルをインポートしてBase.metadataに登録
 from app import models
 from app.models import (
@@ -188,6 +189,18 @@ def seed_alarm_parse_rules(session: Session):
     print("アラームパースルール投入完了")
 
 
+def seed_initial_admin_user(session: Session):
+    """初期管理者の投入"""
+    result = user_service.ensure_initial_admin_user(session)
+    if result is None:
+        print("初期管理者は既に存在します")
+        return
+
+    user, temporary_password = result
+    print(f"初期管理者を投入しました: id={user.id}, role={user.role}")
+    print(f"初期管理者の初回ログイン用パスワード: {temporary_password}")
+
+
 def stamp_alembic_head():
     """新規作成したDBを Alembic head として記録する。"""
     alembic_config = Config(str(BASE_DIR / "alembic.ini"))
@@ -218,11 +231,12 @@ def init_db(drop_existing: bool = False):
         seed_plc_data(session)
         seed_code_length_rules(session)
         seed_alarm_parse_rules(session)
+        seed_initial_admin_user(session)
         stamp_alembic_head()
-        print("\n✓ データベースの初期化が完了しました")
+        print("\n[OK] データベースの初期化が完了しました")
     except Exception as e:
         session.rollback()
-        print(f"\n✗ エラーが発生しました: {e}")
+        print(f"\n[ERROR] エラーが発生しました: {e}")
         raise
     finally:
         session.close()

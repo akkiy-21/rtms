@@ -23,9 +23,17 @@ interface DeviceFormProps {
   initialData?: Partial<DeviceFormData>;
   onSubmit: (data: DeviceFormData) => void;
   children?: React.ReactNode;
+  showMacAddress?: boolean;
+  macAddressReadOnly?: boolean;
 }
 
-const DeviceForm: React.FC<DeviceFormProps> = ({ initialData, onSubmit, children }) => {
+const DeviceForm: React.FC<DeviceFormProps> = ({
+  initialData,
+  onSubmit,
+  children,
+  showMacAddress = true,
+  macAddressReadOnly = false,
+}) => {
   const [showSshPassword, setShowSshPassword] = React.useState(false);
 
   const form = useForm<DeviceFormData>({
@@ -61,19 +69,25 @@ const DeviceForm: React.FC<DeviceFormProps> = ({ initialData, onSubmit, children
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-        <FormField
-          control={form.control}
-          name="mac_address"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>{TECHNICAL_TERMS.MAC_ADDRESS}</FormLabel>
-              <FormControl>
-                <Input placeholder={DEVICE_LABELS.PLACEHOLDERS.MAC_ADDRESS} {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        {showMacAddress && (
+          <FormField
+            control={form.control}
+            name="mac_address"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>{TECHNICAL_TERMS.MAC_ADDRESS}</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder={DEVICE_LABELS.PLACEHOLDERS.MAC_ADDRESS}
+                    readOnly={macAddressReadOnly}
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
 
         <FormField
           control={form.control}

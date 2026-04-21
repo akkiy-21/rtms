@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List, Union
 
+from ...auth import require_admin_user, require_authenticated_user
 from ...database import get_db
 from ...schemas import DeviceRegistration, DeviceOut, DeviceUpdate, DeviceRuntimeNetworkInfo, DeviceRuntimeNetworkUpdate, Client, ClientAssociation, ClientCreate, EfficiencyAddress, EfficiencyAddressCreate, EfficiencyAddressUpdate, AlarmGroup, AlarmGroupCreate, AlarmGroupUpdate, AlarmGroupParseRuleSelectionUpdate, AlarmAddressParsePreview, AlarmAddressParsePreviewRequest, AlarmAddress, AlarmAddressCreate, AlarmComment, AlarmCommentCreate, LoggingSetting, LoggingSettingCreate, LoggingSettingUpdate, LoggingDataSetting, LoggingDataSettingCreate, LoggingDataSettingUpdate, QualityControlSignal, QualityControlSignalCreate, QualityControlSignalUpdate, DeviceProductAssociationResponse, DeviceProductAssociation, DeviceFullInfo, TimeTable, DeviceInfo
 from ...services import device_service
@@ -11,25 +12,25 @@ router = APIRouter(
     tags=["devices"]
 )
 
-@router.post("", response_model=DeviceOut, status_code=201)
+@router.post("", response_model=DeviceOut, status_code=201, dependencies=[Depends(require_admin_user)])
 async def register_device(registration: DeviceRegistration, db: Session = Depends(get_db)):
     device = device_service.register_device(db, registration)
     if device is None:
         raise HTTPException(status_code=400, detail="Device registration failed")
     return device
 
-@router.get("", response_model=List[DeviceOut])
+@router.get("", response_model=List[DeviceOut], dependencies=[Depends(require_authenticated_user)])
 async def get_devices(db: Session = Depends(get_db)):
     return device_service.get_devices(db)
 
-@router.get("/{device_id}", response_model=DeviceOut)
+@router.get("/{device_id}", response_model=DeviceOut, dependencies=[Depends(require_authenticated_user)])
 async def get_device(device_id: int, db: Session = Depends(get_db)):
     device = device_service.get_device(db, device_id)
     if device is None:
         raise HTTPException(status_code=404, detail="Device not found")
     return device
 
-@router.put("/{device_id}", response_model=DeviceOut)
+@router.put("/{device_id}", response_model=DeviceOut, dependencies=[Depends(require_admin_user)])
 async def update_device(device_id: int, device_update: DeviceUpdate, db: Session = Depends(get_db)):
     updated_device = device_service.update_device(db, device_id, device_update)
     if updated_device is None:
@@ -47,7 +48,7 @@ async def update_device_runtime_network(
         raise HTTPException(status_code=404, detail="Device not found")
     return updated_runtime_network
 
-@router.delete("/{device_id}", status_code=204)
+@router.delete("/{device_id}", status_code=204, dependencies=[Depends(require_admin_user)])
 async def delete_device(device_id: int, db: Session = Depends(get_db)):
     success = device_service.delete_device(db, device_id)
     if not success:
@@ -76,7 +77,7 @@ async def get_device_full_info(mac_address: str, db: Session = Depends(get_db)):
     return device_info
 
 # クライアント関連のエンドポイント
-client_router = APIRouter(prefix="/{device_id}/clients", tags=["device_clients"])
+client_router = APIRouter(prefix="/{device_id}/clients", tags=["device_clients"], dependencies=[Depends(require_admin_user)])
 
 @client_router.get("", response_model=List[Client])
 async def get_clients_for_device(device_id: int, db: Session = Depends(get_db)):
@@ -132,7 +133,7 @@ async def delete_client_for_device(
     return None
 
 # 効率アドレス関連のエンドポイント
-efficiency_router = APIRouter(prefix="/{device_id}/efficiency-addresses", tags=["device_efficiency_addresses"])
+efficiency_router = APIRouter(prefix="/{device_id}/efficiency-addresses", tags=["device_efficiency_addresses"], dependencies=[Depends(require_admin_user)])
 
 @efficiency_router.get("", response_model=List[EfficiencyAddress])
 def get_efficiency_addresses(device_id: int, db: Session = Depends(get_db)):
@@ -160,7 +161,7 @@ def delete_efficiency_address(device_id: int, efficiency_address_id: int, db: Se
     return {"message": "Efficiency address deleted successfully"}
 
 # アラームグループ関連のエンドポイント
-alarm_group_router = APIRouter(prefix="/{device_id}/alarm-groups", tags=["device_alarm_groups"])
+alarm_group_router = APIRouter(prefix="/{device_id}/alarm-groups", tags=["device_alarm_groups"], dependencies=[Depends(require_admin_user)])
 
 @alarm_group_router.get("", response_model=List[AlarmGroup])
 async def get_alarm_groups(device_id: int, db: Session = Depends(get_db)):
@@ -210,7 +211,7 @@ async def delete_alarm_group(device_id: int, alarm_group_id: int, db: Session = 
     return None
 
 # アラームアドレス関連のエンドポイント
-alarm_address_router = APIRouter(prefix="/{device_id}/alarm-groups/{alarm_group_id}/addresses", tags=["device_alarm_addresses"])
+alarm_address_router = APIRouter(prefix="/{device_id}/alarm-groups/{alarm_group_id}/addresses", tags=["device_alarm_addresses"], dependencies=[Depends(require_admin_user)])
 
 @alarm_address_router.get("", response_model=List[AlarmAddress])
 async def get_alarm_addresses(device_id: int, alarm_group_id: int, db: Session = Depends(get_db)):
@@ -238,7 +239,7 @@ async def preview_alarm_addresses(
 # アラームアドレスの更新と削除のエンドポイントも同様に実装
 
 # アラームコメント関連のエンドポイント
-alarm_comment_router = APIRouter(prefix="/{device_id}/alarm-groups/{alarm_group_id}/addresses/{alarm_address_id}/comments", tags=["device_alarm_comments"])
+alarm_comment_router = APIRouter(prefix="/{device_id}/alarm-groups/{alarm_group_id}/addresses/{alarm_address_id}/comments", tags=["device_alarm_comments"], dependencies=[Depends(require_admin_user)])
 
 @alarm_comment_router.get("", response_model=List[AlarmComment])
 async def get_alarm_comments(device_id: int, alarm_group_id: int, alarm_address_id: int, db: Session = Depends(get_db)):
@@ -254,7 +255,7 @@ async def create_alarm_comment(device_id: int, alarm_group_id: int, alarm_addres
         raise HTTPException(status_code=404, detail="Alarm address not found for this device and alarm group")
     return device_service.create_alarm_comment(db, alarm_address_id, alarm_comment)
 
-@router.put("/{device_id}/alarm-groups/{alarm_group_id}/addresses/bulk", response_model=List[AlarmAddress])
+@router.put("/{device_id}/alarm-groups/{alarm_group_id}/addresses/bulk", response_model=List[AlarmAddress], dependencies=[Depends(require_admin_user)])
 async def update_alarm_addresses(
     device_id: int,
     alarm_group_id: int,
@@ -270,43 +271,43 @@ async def update_alarm_addresses(
         raise HTTPException(status_code=500, detail="An error occurred while updating alarm addresses")
         
 # Logging関連のエンドポイント
-@router.get("/{device_id}/logging-settings", response_model=List[LoggingSetting])
+@router.get("/{device_id}/logging-settings", response_model=List[LoggingSetting], dependencies=[Depends(require_admin_user)])
 def get_logging_settings(device_id: int, db: Session = Depends(get_db)):
     return device_service.get_logging_settings(db, device_id)
 
-@router.post("/{device_id}/logging-settings", response_model=LoggingSetting)
+@router.post("/{device_id}/logging-settings", response_model=LoggingSetting, dependencies=[Depends(require_admin_user)])
 def create_logging_setting(device_id: int, logging_setting: LoggingSettingCreate, db: Session = Depends(get_db)):
     return device_service.create_logging_setting(db, device_id, logging_setting)
 
-@router.get("/{device_id}/logging-settings/{logging_setting_id}", response_model=LoggingSetting)
+@router.get("/{device_id}/logging-settings/{logging_setting_id}", response_model=LoggingSetting, dependencies=[Depends(require_admin_user)])
 def get_logging_setting(device_id: int, logging_setting_id: int, db: Session = Depends(get_db)):
     logging_setting = device_service.get_logging_setting(db, logging_setting_id)
     if logging_setting is None:
         raise HTTPException(status_code=404, detail="Logging setting not found")
     return logging_setting
 
-@router.put("/{device_id}/logging-settings/{logging_setting_id}", response_model=LoggingSetting)
+@router.put("/{device_id}/logging-settings/{logging_setting_id}", response_model=LoggingSetting, dependencies=[Depends(require_admin_user)])
 def update_logging_setting(device_id: int, logging_setting_id: int, logging_setting: LoggingSettingUpdate, db: Session = Depends(get_db)):
     updated_logging_setting = device_service.update_logging_setting(db, logging_setting_id, logging_setting)
     if updated_logging_setting is None:
         raise HTTPException(status_code=404, detail="Logging setting not found")
     return updated_logging_setting
 
-@router.delete("/{device_id}/logging-settings/{logging_setting_id}", status_code=204)
+@router.delete("/{device_id}/logging-settings/{logging_setting_id}", status_code=204, dependencies=[Depends(require_admin_user)])
 def delete_logging_setting(device_id: int, logging_setting_id: int, db: Session = Depends(get_db)):
     if not device_service.delete_logging_setting(db, logging_setting_id):
         raise HTTPException(status_code=404, detail="Logging setting not found")
     return None
 
-@router.post("/{device_id}/logging-settings/{logging_setting_id}/data", response_model=LoggingDataSetting)
+@router.post("/{device_id}/logging-settings/{logging_setting_id}/data", response_model=LoggingDataSetting, dependencies=[Depends(require_admin_user)])
 def create_logging_data_setting(device_id: int, logging_setting_id: int, logging_data_setting: LoggingDataSettingCreate, db: Session = Depends(get_db)):
     return device_service.create_logging_data_setting(db, logging_setting_id, logging_data_setting)
 
-@router.get("/{device_id}/logging-settings/{logging_setting_id}/data", response_model=List[LoggingDataSetting])
+@router.get("/{device_id}/logging-settings/{logging_setting_id}/data", response_model=List[LoggingDataSetting], dependencies=[Depends(require_admin_user)])
 def get_logging_data_settings(device_id: int, logging_setting_id: int, db: Session = Depends(get_db)):
     return device_service.get_logging_data_settings(db, logging_setting_id)
 
-@router.put("/{device_id}/logging-settings/{logging_setting_id}/data/{logging_data_setting_id}", response_model=LoggingDataSetting)
+@router.put("/{device_id}/logging-settings/{logging_setting_id}/data/{logging_data_setting_id}", response_model=LoggingDataSetting, dependencies=[Depends(require_admin_user)])
 def update_logging_data_setting(
     device_id: int,
     logging_setting_id: int,
@@ -319,30 +320,30 @@ def update_logging_data_setting(
         raise HTTPException(status_code=404, detail="Logging data setting not found")
     return updated_setting
 
-@router.delete("/{device_id}/logging-settings/{logging_setting_id}/data/{logging_data_setting_id}", status_code=204)
+@router.delete("/{device_id}/logging-settings/{logging_setting_id}/data/{logging_data_setting_id}", status_code=204, dependencies=[Depends(require_admin_user)])
 def delete_logging_data_setting(device_id: int, logging_setting_id: int, logging_data_setting_id: int, db: Session = Depends(get_db)):
     if not device_service.delete_logging_data_setting(db, logging_data_setting_id):
         raise HTTPException(status_code=404, detail="Logging data setting not found")
     return None
 
 # QualityControlSignal関連のエンドポイント
-@router.get("/{device_id}/quality-control-signals", response_model=List[QualityControlSignal])
+@router.get("/{device_id}/quality-control-signals", response_model=List[QualityControlSignal], dependencies=[Depends(require_admin_user)])
 def get_quality_control_signals(device_id: int, db: Session = Depends(get_db)):
     signals = device_service.get_quality_control_signals(db, device_id)
     return [QualityControlSignal.from_orm(signal) for signal in signals]
 
-@router.post("/{device_id}/quality-control-signals", response_model=QualityControlSignal)
+@router.post("/{device_id}/quality-control-signals", response_model=QualityControlSignal, dependencies=[Depends(require_admin_user)])
 def create_quality_control_signal(device_id: int, quality_control_signal: QualityControlSignalCreate, db: Session = Depends(get_db)):
     return device_service.create_quality_control_signal(db, device_id, quality_control_signal)
 
-@router.get("/{device_id}/quality-control-signals/{quality_control_signal_id}", response_model=QualityControlSignal)
+@router.get("/{device_id}/quality-control-signals/{quality_control_signal_id}", response_model=QualityControlSignal, dependencies=[Depends(require_admin_user)])
 def get_quality_control_signal(device_id: int, quality_control_signal_id: int, db: Session = Depends(get_db)):
     quality_control_signal = device_service.get_quality_control_signal(db, quality_control_signal_id)
     if quality_control_signal is None:
         raise HTTPException(status_code=404, detail="Quality control signal not found")
     return quality_control_signal
 
-@router.put("/{device_id}/quality-control-signals/{quality_control_signal_id}", response_model=QualityControlSignal)
+@router.put("/{device_id}/quality-control-signals/{quality_control_signal_id}", response_model=QualityControlSignal, dependencies=[Depends(require_admin_user)])
 def update_quality_control_signal(device_id: int, quality_control_signal_id: int, quality_control_signal: QualityControlSignalUpdate, db: Session = Depends(get_db)):
     try:
         print(f"Received update data: {quality_control_signal.dict()}")  # デバッグ用ログ
@@ -354,22 +355,22 @@ def update_quality_control_signal(device_id: int, quality_control_signal_id: int
         print(f"Error updating quality control signal: {str(e)}")  # エラーログ
         raise
 
-@router.delete("/{device_id}/quality-control-signals/{quality_control_signal_id}", status_code=204)
+@router.delete("/{device_id}/quality-control-signals/{quality_control_signal_id}", status_code=204, dependencies=[Depends(require_admin_user)])
 def delete_quality_control_signal(device_id: int, quality_control_signal_id: int, db: Session = Depends(get_db)):
     if not device_service.delete_quality_control_signal(db, quality_control_signal_id):
         raise HTTPException(status_code=404, detail="Quality control signal not found")
     return None
 
 # DeviceProduction関連のエンドポイント
-@router.get("/{device_id}/products", response_model=List[DeviceProductAssociationResponse])
+@router.get("/{device_id}/products", response_model=List[DeviceProductAssociationResponse], dependencies=[Depends(require_admin_user)])
 def get_products_for_device(device_id: int, db: Session = Depends(get_db)):
     return device_service.get_device_products(db, device_id)
 
-@router.post("/{device_id}/products/{product_id}", response_model=DeviceProductAssociation)
+@router.post("/{device_id}/products/{product_id}", response_model=DeviceProductAssociation, dependencies=[Depends(require_admin_user)])
 def add_product_to_device(device_id: int, product_id: int, db: Session = Depends(get_db)):
     return device_service.add_product_to_device(db, device_id, product_id)
 
-@router.delete("/{device_id}/products/{product_id}", status_code=204)
+@router.delete("/{device_id}/products/{product_id}", status_code=204, dependencies=[Depends(require_admin_user)])
 def remove_product_from_device(device_id: int, product_id: int, db: Session = Depends(get_db)):
     success = device_service.remove_product_from_device(db, device_id, product_id)
     if not success:

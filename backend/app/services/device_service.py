@@ -31,7 +31,8 @@ def register_device(db: Session, registration: DeviceRegistration) -> Optional[D
         device = device_crud.create_device(db, registration)
         print("MQTT client in register_device:", mqtt_client)
         print("MQTT client type:", type(mqtt_client))
-        mqtt_client.add_device(device.id, device.mac_address)
+        if device.device_status == 'active':
+            mqtt_client.add_device(device.id, device.mac_address)
         return DeviceOut.model_validate(device)
     except SQLAlchemyError as e:
         print(f"SQLAlchemy error in register_device: {e}")
@@ -41,8 +42,8 @@ def register_device(db: Session, registration: DeviceRegistration) -> Optional[D
             raise HTTPException(status_code=400, detail="MAC address already exists")
         raise HTTPException(status_code=500, detail="An error occurred while registering the device")
 
-def get_devices(db: Session) -> List[DeviceOut]:
-    devices = device_crud.get_devices(db)
+def get_devices(db: Session, device_status: str | None = None) -> List[DeviceOut]:
+    devices = device_crud.get_devices(db, device_status=device_status)
     return [DeviceOut.model_validate(device) for device in devices]
 
 def get_device(db: Session, device_id: int):
@@ -56,6 +57,7 @@ def update_device(db: Session, device_id: int, device_update: DeviceUpdate) -> O
         
         # 古いMACアドレスを保存
         old_mac_address = old_device.mac_address
+        old_device_status = old_device.device_status
         
         updated_device_info = device_crud.update_device(db, device_id, device_update)
         if updated_device_info is None:
@@ -63,13 +65,15 @@ def update_device(db: Session, device_id: int, device_update: DeviceUpdate) -> O
         
         # DeviceOutモデルのインスタンスを作成
         updated_device = DeviceOut(**updated_device_info)
-        
-        # 更新通知を送信
-        mqtt_client.publish_update_notification(old_mac_address, "device_info")
-        
-        # MACアドレスが変更された場合、MQTT購読を更新
-        if old_mac_address != updated_device_info['mac_address']:
-            mqtt_client.update_device_mac(device_id, updated_device_info['mac_address'])
+
+        if old_device_status == 'active' and updated_device_info['device_status'] == 'active':
+            mqtt_client.publish_update_notification(old_mac_address, "device_info")
+            if old_mac_address != updated_device_info['mac_address']:
+                mqtt_client.update_device_mac(device_id, updated_device_info['mac_address'])
+        elif old_device_status != 'active' and updated_device_info['device_status'] == 'active':
+            mqtt_client.add_device(device_id, updated_device_info['mac_address'])
+        elif old_device_status == 'active' and updated_device_info['device_status'] != 'active':
+            mqtt_client.remove_device(device_id)
         
         return updated_device
     except SQLAlchemyError as e:
@@ -109,8 +113,8 @@ def delete_device(db: Session, device_id: int) -> bool:
         mqtt_client.remove_device(device_id)
     return result
 
-def get_device_by_mac(db: Session, mac_address: str):
-    return db.query(Devices).filter(Devices.mac_address == mac_address).first()
+def get_device_by_mac(db: Session, mac_address: str, device_status: str | None = None):
+    return device_crud.get_device_by_mac(db, mac_address, device_status=device_status)
 
 def get_clients_for_device(db: Session, device_id: int) -> List[Client]:
     clients = device_crud.get_clients_for_device(db, device_id)

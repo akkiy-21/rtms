@@ -9,23 +9,20 @@ import { USER_LABELS, UserRole, UserStatus } from '../user-labels';
 describe('USER_LABELS', () => {
   describe('ROLES', () => {
     it('should have correct Japanese labels for user roles', () => {
-      expect(USER_LABELS.ROLES.SU).toBe('スーパーユーザー');
       expect(USER_LABELS.ROLES.AD).toBe('管理者');
       expect(USER_LABELS.ROLES.CU).toBe('一般ユーザー');
     });
 
     it('should have all required role codes', () => {
       const roleKeys = Object.keys(USER_LABELS.ROLES);
-      expect(roleKeys).toContain('SU');
       expect(roleKeys).toContain('AD');
       expect(roleKeys).toContain('CU');
-      expect(roleKeys).toHaveLength(3);
+      expect(roleKeys).toHaveLength(2);
     });
   });
 
   describe('ROLE_DESCRIPTIONS', () => {
     it('should have detailed role descriptions', () => {
-      expect(USER_LABELS.ROLE_DESCRIPTIONS.SU).toBe('スーパーユーザー');
       expect(USER_LABELS.ROLE_DESCRIPTIONS.AD).toBe('管理者ユーザー');
       expect(USER_LABELS.ROLE_DESCRIPTIONS.CU).toBe('一般ユーザー');
     });
@@ -54,7 +51,7 @@ describe('USER_LABELS', () => {
       expect(USER_LABELS.VALIDATION.ID_REQUIRED).toBe('社員IDは必須です');
       expect(USER_LABELS.VALIDATION.NAME_REQUIRED).toBe('名前は必須です');
       expect(USER_LABELS.VALIDATION.ROLE_REQUIRED).toBe('ロールを選択してください');
-      expect(USER_LABELS.VALIDATION.PASSWORD_REQUIRED_FOR_ADMIN).toBe('スーパーユーザーと管理者ユーザーにはパスワードが必要です');
+      expect(USER_LABELS.VALIDATION.PASSWORD_REQUIRED_FOR_ADMIN).toBe('ユーザー作成後に仮パスワードが発行されます');
     });
   });
 
@@ -81,7 +78,7 @@ describe('USER_LABELS', () => {
 
     it('should have Japanese confirmation messages', () => {
       expect(USER_LABELS.MESSAGES.DELETE_CONFIRM).toBe('このユーザーを削除してもよろしいですか？');
-      expect(USER_LABELS.MESSAGES.PASSWORD_REQUIRED).toBe('スーパーユーザーと管理者ユーザーにはパスワードが必要です');
+      expect(USER_LABELS.MESSAGES.PASSWORD_REQUIRED).toBe('作成後に仮パスワードが発行されます');
     });
   });
 
@@ -96,7 +93,7 @@ describe('USER_LABELS', () => {
 
   describe('Type definitions', () => {
     it('should have correct UserRole type', () => {
-      const validRoles: UserRole[] = ['SU', 'AD', 'CU'];
+      const validRoles: UserRole[] = ['AD', 'CU'];
       validRoles.forEach(role => {
         expect(USER_LABELS.ROLES[role]).toBeDefined();
       });
@@ -116,12 +113,10 @@ describe('USER_LABELS', () => {
       const roles = USER_LABELS.ROLES;
       
       // すべてのロールが日本語で定義されている
-      expect(roles.SU).toMatch(/[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/); // 日本語文字を含む
       expect(roles.AD).toMatch(/[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/);
       expect(roles.CU).toMatch(/[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/);
       
       // 一貫した翻訳パターン
-      expect(roles.SU).toBe('スーパーユーザー');
       expect(roles.AD).toBe('管理者');
       expect(roles.CU).toBe('一般ユーザー');
     });

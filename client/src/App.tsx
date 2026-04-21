@@ -157,6 +157,10 @@ const AppContent: React.FC = () => {
     setSelectedMac,
     macAddresses,
     mqttError,
+    pairingStatus,
+    pairingCode,
+    pairingCodeExpiresAt,
+    pairingRefreshIntervalSeconds,
     initializeApp,
   } = useDeviceSetup({
     loadSettings,
@@ -706,6 +710,10 @@ useEffect(() => {
         serverIP={serverIP}
         serverPort={serverPort}
         macAddress={selectedMac}
+        pairingStatus={pairingStatus}
+        pairingCode={pairingCode}
+        pairingCodeExpiresAt={pairingCodeExpiresAt}
+        pairingRefreshIntervalSeconds={pairingRefreshIntervalSeconds}
         mqttBrokerIP={mqttBrokerIP}
         mqttBrokerPort={mqttBrokerPort}
         onOpenSettings={handleOpenSettings}

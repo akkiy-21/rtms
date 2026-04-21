@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
+  LayoutDashboard,
   Monitor,
   Tag,
   Cpu,
@@ -12,6 +13,7 @@ import {
   Bell,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/contexts/AuthContext';
 import { NAVIGATION_LABELS } from '@/localization';
 
 interface NavItem {
@@ -39,8 +41,18 @@ interface SidebarProps {
  */
 export function Sidebar({ onNavigate }: SidebarProps) {
   const location = useLocation();
+  const { user } = useAuth();
 
   const navItems: NavItem[] = [
+    {
+      label: NAVIGATION_LABELS.DASHBOARD,
+      href: '/dashboard',
+      icon: <LayoutDashboard className="w-4 h-4" />,
+    },
+  ];
+
+  if (user?.role === 'AD') {
+    navItems.push(
     {
       label: NAVIGATION_LABELS.DEVICES,
       href: '/devices',
@@ -81,12 +93,16 @@ export function Sidebar({ onNavigate }: SidebarProps) {
       href: '/users',
       icon: <Users className="w-4 h-4" />,
     },
+    );
+  }
+
+  navItems.push(
     {
       label: NAVIGATION_LABELS.DATA_DOWNLOAD,
       href: '/data-download',
       icon: <Download className="w-4 h-4" />,
     },
-  ];
+  );
 
   const handleClick = () => {
     if (onNavigate) {

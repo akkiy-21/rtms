@@ -6,6 +6,7 @@ from typing import List
 from datetime import datetime
 from dateutil import parser  # datetime文字列のパースに使用
 
+from ...auth import require_authenticated_user
 from ...database import get_db
 from ...schemas import (
     QualityControlMeasurement,
@@ -34,7 +35,7 @@ def create_quality_control_measurement(device_id: int, measurement: QualityContr
     return dashboard_service.create_quality_control_measurement(db, measurement)
 
 # 集計されたデータを返すエンドポイントに更新
-@router.get("/{device_id}/qualitycontrolmeasurement", response_model=List[QualityControlMeasurementAggregated])
+@router.get("/{device_id}/qualitycontrolmeasurement", response_model=List[QualityControlMeasurementAggregated], dependencies=[Depends(require_authenticated_user)])
 def read_quality_control_measurements(
     device_id: int,
     start_datetime: str = Query(..., description="開始日時"),
@@ -54,7 +55,7 @@ def read_quality_control_measurements(
         raise HTTPException(status_code=404, detail="Quality Control Measurements not found")
     return measurements
 
-@router.get("/{device_id}/qualitycontrolmeasurement/{measurement_id}", response_model=QualityControlMeasurement)
+@router.get("/{device_id}/qualitycontrolmeasurement/{measurement_id}", response_model=QualityControlMeasurement, dependencies=[Depends(require_authenticated_user)])
 def read_quality_control_measurement(device_id: int, measurement_id: int, db: Session = Depends(get_db)):
     measurement = dashboard_service.get_quality_control_measurement(db, device_id=device_id, measurement_id=measurement_id)
     if measurement is None:
@@ -88,12 +89,12 @@ def create_efficiency_measurement(device_id: int, measurement: EfficiencyMeasure
     measurement.device_id = device_id
     return dashboard_service.create_efficiency_measurement(db, measurement)
 
-@router.get("/{device_id}/efficiencymeasurement", response_model=List[EfficiencyMeasurement])
+@router.get("/{device_id}/efficiencymeasurement", response_model=List[EfficiencyMeasurement], dependencies=[Depends(require_authenticated_user)])
 def read_efficiency_measurements(device_id: int, db: Session = Depends(get_db)):
     measurements = dashboard_service.get_efficiency_measurements(db, device_id)
     return measurements
 
-@router.get("/{device_id}/efficiencymeasurement/{measurement_id}", response_model=EfficiencyMeasurement)
+@router.get("/{device_id}/efficiencymeasurement/{measurement_id}", response_model=EfficiencyMeasurement, dependencies=[Depends(require_authenticated_user)])
 def read_efficiency_measurement(device_id: int, measurement_id: int, db: Session = Depends(get_db)):
     measurement = dashboard_service.get_efficiency_measurement(db, device_id=device_id, measurement_id=measurement_id)
     if measurement is None:
@@ -126,12 +127,12 @@ def create_alarm_measurement(device_id: int, measurement: AlarmMeasurementCreate
     measurement.device_id = device_id
     return dashboard_service.create_alarm_measurement(db, measurement)
 
-@router.get("/{device_id}/alarmmeasurement", response_model=List[AlarmMeasurement])
+@router.get("/{device_id}/alarmmeasurement", response_model=List[AlarmMeasurement], dependencies=[Depends(require_authenticated_user)])
 def read_alarm_measurements(device_id: int, db: Session = Depends(get_db)):
     measurements = dashboard_service.get_alarm_measurements(db, device_id)
     return measurements
 
-@router.get("/{device_id}/alarmmeasurement/{measurement_id}", response_model=AlarmMeasurement)
+@router.get("/{device_id}/alarmmeasurement/{measurement_id}", response_model=AlarmMeasurement, dependencies=[Depends(require_authenticated_user)])
 def read_alarm_measurement(device_id: int, measurement_id: int, db: Session = Depends(get_db)):
     measurement = dashboard_service.get_alarm_measurement(db, device_id=device_id, measurement_id=measurement_id)
     if measurement is None:

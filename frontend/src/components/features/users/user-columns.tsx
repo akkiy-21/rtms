@@ -37,7 +37,6 @@ export const createUserColumns = (
     cell: ({ row }) => {
       const role = row.getValue("role") as string;
       const roleColors: Record<string, "default" | "secondary" | "outline"> = {
-        SU: "default",
         AD: "secondary",
         CU: "outline",
       };

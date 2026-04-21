@@ -6,6 +6,14 @@ import { createUser } from '../services/api';
 import { UserFormData } from '../components/features/users/user-form-schema';
 import { useApiError } from '../hooks/use-api-error';
 import { Button } from '../components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '../components/ui/dialog';
 import { USER_LABELS } from '../localization/constants/user-labels';
 import { ACTION_LABELS } from '../localization/constants/action-labels';
 import { MESSAGE_FORMATTER } from '../localization/utils/message-formatter';
@@ -15,12 +23,15 @@ const UserCreatePage: React.FC = () => {
   const navigate = useNavigate();
   const { handleError } = useApiError();
   const [isLoading, setIsLoading] = useState(false);
+  const [temporaryPassword, setTemporaryPassword] = useState<string | null>(null);
+  const [createdUserId, setCreatedUserId] = useState<string | null>(null);
 
   const handleSubmit = async (data: UserFormData) => {
     try {
       setIsLoading(true);
-      await createUser(data);
-      navigate('/users');
+      const result = await createUser(data);
+      setCreatedUserId(result.user.id);
+      setTemporaryPassword(result.temporary_password);
     } catch (error) {
       handleError(error);
     } finally {
@@ -47,6 +58,27 @@ const UserCreatePage: React.FC = () => {
           </Button>
         </div>
       </UserForm>
+      <Dialog open={temporaryPassword !== null} onOpenChange={(open) => {
+        if (!open) {
+          setTemporaryPassword(null);
+          navigate('/users');
+        }
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>仮パスワードを発行しました</DialogTitle>
+            <DialogDescription>
+              ユーザー {createdUserId} は初回ログイン時にパスワード変更が必要です。
+            </DialogDescription>
+          </DialogHeader>
+          <div className="rounded-md border bg-slate-50 p-4 font-mono text-lg tracking-wide">
+            {temporaryPassword}
+          </div>
+          <DialogFooter>
+            <Button onClick={() => navigate('/users')}>{ACTION_LABELS.CLOSE}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </FormWrapper>
   );
 };
