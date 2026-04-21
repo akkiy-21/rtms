@@ -278,6 +278,73 @@ class EfficiencyAddressUpdate(BaseModel):
     address: Optional[str] = None
     classification_id: Optional[int] = None
 
+class AlarmParseRuleOffsetMode(str, Enum):
+    ROW_INDEX_WORD = "row_index_word"
+    PRESERVE_ADDRESS = "preserve_address"
+
+class AlarmParseAlarmNoMode(str, Enum):
+    LINE_INDEX = "line_index"
+    REGEX_GROUP = "regex_group"
+
+class AlarmParseCommentMode(str, Enum):
+    NONE = "none"
+    CSV_COLUMNS = "csv_columns"
+    REGEX_GROUP = "regex_group"
+
+class AlarmParseRulePatternBase(BaseModel):
+    pattern_name: str
+    sort_order: int = 0
+    regex_pattern: str
+    address_type_value: Optional[str] = None
+    address_type_group: Optional[int] = None
+    alarm_no_mode: AlarmParseAlarmNoMode = AlarmParseAlarmNoMode.LINE_INDEX
+    alarm_no_group: Optional[int] = None
+    alarm_no_offset: int = 0
+    address_group: Optional[int] = None
+    bit_group: Optional[int] = None
+    combined_address_bit_group: Optional[int] = None
+    combined_address_bit_separator: str = "."
+    comment_mode: AlarmParseCommentMode = AlarmParseCommentMode.NONE
+    comment_group: Optional[int] = None
+    comment_columns_start: Optional[int] = None
+    address_pad_length: int = Field(4, ge=1)
+
+class AlarmParseRulePatternCreate(AlarmParseRulePatternBase):
+    pass
+
+class AlarmParseRulePattern(AlarmParseRulePatternBase):
+    id: int
+    rule_id: int
+
+    model_config = ConfigDict(from_attributes=True)
+
+class AlarmParseRuleBase(BaseModel):
+    name: str
+    description: Optional[str] = None
+    is_active: bool = True
+    skip_header_rows: int = Field(1, ge=0)
+    offset_mode: AlarmParseRuleOffsetMode = AlarmParseRuleOffsetMode.ROW_INDEX_WORD
+
+class AlarmParseRuleCreate(AlarmParseRuleBase):
+    patterns: List[AlarmParseRulePatternCreate]
+
+class AlarmParseRuleUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    is_active: Optional[bool] = None
+    skip_header_rows: Optional[int] = Field(None, ge=0)
+    offset_mode: Optional[AlarmParseRuleOffsetMode] = None
+    patterns: Optional[List[AlarmParseRulePatternCreate]] = None
+
+class AlarmParseRule(AlarmParseRuleBase):
+    id: int
+    patterns: List[AlarmParseRulePattern] = []
+
+    model_config = ConfigDict(from_attributes=True)
+
+class AlarmGroupParseRuleSelectionUpdate(BaseModel):
+    selected_parse_rule_id: Optional[int] = None
+
 # アラームグループ関連のスキーマ
 class AlarmGroupBase(BaseModel):
     name: str
@@ -293,6 +360,7 @@ class AlarmGroupUpdate(BaseModel):
 class AlarmGroup(AlarmGroupBase):
     id: int
     device_id: int
+    selected_parse_rule_id: Optional[int] = None
 
     class Config:
         from_attributes = True
@@ -319,6 +387,23 @@ class AlarmAddress(AlarmAddressBase):
 
     class Config:
         from_attributes = True
+
+class AlarmAddressPreview(AlarmAddressBase):
+    comments: List['AlarmCommentCreate'] = []
+
+class AlarmAddressParsePreviewRequest(BaseModel):
+    csv_content: str
+    parse_rule_id: Optional[int] = None
+
+class AlarmAddressParsePreview(BaseModel):
+    parse_rule_id: int
+    rule_name: str
+    offset_mode: AlarmParseRuleOffsetMode
+    addresses: List[AlarmAddressPreview]
+    warnings: List[str] = []
+    processed_line_count: int
+    matched_line_count: int
+    unmatched_line_count: int
 
 # アラームコメント関連のスキーマ
 class AlarmCommentBase(BaseModel):
@@ -354,6 +439,7 @@ class DeviceFullInfo(DeviceOut):
 AlarmAddressCreate.update_forward_refs()
 AlarmAddressUpdate.update_forward_refs()
 AlarmAddress.update_forward_refs()
+AlarmAddressPreview.update_forward_refs()
 
 # Logging関連のスキーマ
 class LoggingDataSettingBase(BaseModel):

@@ -10,7 +10,17 @@ import { User, UserFormData } from '../types/user';
 import { Client, ClientFormData } from '../types/client';
 import { EfficiencyAddress } from '../types/efficiency';
 import { EfficiencyAddressFormData } from '../components/features/efficiency/efficiency-address-form-schema';
-import { AlarmGroup, AlarmGroupFormData, AlarmAddress, AlarmAddressFormData } from '../types/alarm';
+import {
+  AlarmGroup,
+  AlarmGroupFormData,
+  AlarmGroupParseRuleSelectionData,
+  AlarmAddress,
+  AlarmAddressFormData,
+  AlarmAddressParsePreview,
+  AlarmAddressParsePreviewRequest,
+  AlarmParseRule,
+  AlarmParseRuleFormData,
+} from '../types/alarm';
 import { LoggingSetting, LoggingSettingFormData, LoggingDataSettingFormData, LoggingDataSetting } from '../types/logging';
 import { QualityControlSignal, QualityControlSignalFormData, QualityControlSignalCreateData, QualityControlSignalUpdateData } from '../types/qualityControl';
 import { DeviceProductAssociation } from '../types/deviceProductAssociation';
@@ -260,6 +270,15 @@ export const updateAlarmGroup = async (deviceId: number, groupId: number, alarmG
   return response.data;
 };
 
+export const updateAlarmGroupParseRule = async (
+  deviceId: number,
+  groupId: number,
+  payload: AlarmGroupParseRuleSelectionData,
+): Promise<AlarmGroup> => {
+  const response = await axios.put(`${API_BASE_URL}/devices/${deviceId}/alarm-groups/${groupId}/parse-rule`, payload);
+  return response.data;
+};
+
 export const deleteAlarmGroup = async (deviceId: number, groupId: number): Promise<void> => {
   await axios.delete(`${API_BASE_URL}/devices/${deviceId}/alarm-groups/${groupId}`);
 };
@@ -285,8 +304,41 @@ export const updateAlarmAddresses = async (deviceId: number, groupId: number, al
   return response.data;
 };
 
+export const previewAlarmAddresses = async (
+  deviceId: number,
+  groupId: number,
+  payload: AlarmAddressParsePreviewRequest,
+): Promise<AlarmAddressParsePreview> => {
+  const response = await axios.post(`${API_BASE_URL}/devices/${deviceId}/alarm-groups/${groupId}/addresses/parse-preview`, payload);
+  return response.data;
+};
+
 export const deleteAlarmAddresses = async (deviceId: number, groupId: number, addressId: number): Promise<void> => {
   await axios.delete(`${API_BASE_URL}/devices/${deviceId}/alarm-groups/${groupId}/addresses/${addressId}`);
+};
+
+export const getAlarmParseRules = async (): Promise<AlarmParseRule[]> => {
+  const response = await axios.get(`${API_BASE_URL}/alarm-parse-rules`);
+  return response.data;
+};
+
+export const getAlarmParseRule = async (ruleId: number): Promise<AlarmParseRule> => {
+  const response = await axios.get(`${API_BASE_URL}/alarm-parse-rules/${ruleId}`);
+  return response.data;
+};
+
+export const createAlarmParseRule = async (ruleData: AlarmParseRuleFormData): Promise<AlarmParseRule> => {
+  const response = await axios.post(`${API_BASE_URL}/alarm-parse-rules`, ruleData);
+  return response.data;
+};
+
+export const updateAlarmParseRule = async (ruleId: number, ruleData: AlarmParseRuleFormData): Promise<AlarmParseRule> => {
+  const response = await axios.put(`${API_BASE_URL}/alarm-parse-rules/${ruleId}`, ruleData);
+  return response.data;
+};
+
+export const deleteAlarmParseRule = async (ruleId: number): Promise<void> => {
+  await axios.delete(`${API_BASE_URL}/alarm-parse-rules/${ruleId}`);
 };
 
 // Logging Settings

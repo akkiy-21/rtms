@@ -6,11 +6,13 @@ from typing import List, Optional
 import traceback
 
 from ..crud import device_crud, data_crud
+from . import alarm_parse_rule_service
 from ..schemas import (
     DeviceOut, DeviceRegistration, DeviceUpdate, DeviceRuntimeNetworkInfo, DeviceRuntimeNetworkUpdate, Client, ClientAssociation, 
     ClientCreate, EfficiencyAddress, EfficiencyAddressCreate, EfficiencyAddressUpdate, AlarmGroup, 
     AlarmGroupCreate, AlarmGroupUpdate, AlarmAddress, AlarmAddressCreate, AlarmAddressUpdate, 
-    AlarmComment, LoggingSettingCreate, LoggingSettingUpdate, LoggingDataSettingCreate, LoggingDataSettingUpdate, 
+    AlarmComment, AlarmGroupParseRuleSelectionUpdate, AlarmAddressParsePreview, AlarmAddressParsePreviewRequest,
+    LoggingSettingCreate, LoggingSettingUpdate, LoggingDataSettingCreate, LoggingDataSettingUpdate, 
     LoggingDataSetting, QualityControlSignal, QualityControlSignalCreate, QualityControlSignalUpdate, DeviceProductAssociation, 
     DeviceProductAssociationResponse, DeviceFullInfo, PrintTrigger, LoggingSetting, EfficiencyAddressFullInfo, 
     ClassificationFullInfo, ClassificationGroupFullInfo, ClientFullInfo, PLCFullInfo, QualityControlSignalFullInfo,
@@ -200,6 +202,20 @@ def update_alarm_group(db: Session, device_id: int, alarm_group_id: int, alarm_g
         print(traceback.format_exc())
         return None
 
+def update_alarm_group_parse_rule_selection(
+    db: Session,
+    device_id: int,
+    alarm_group_id: int,
+    payload: AlarmGroupParseRuleSelectionUpdate,
+) -> Optional[AlarmGroup]:
+    updated_alarm_group = alarm_parse_rule_service.update_alarm_group_parse_rule_selection(
+        db,
+        device_id,
+        alarm_group_id,
+        payload,
+    )
+    return AlarmGroup.model_validate(updated_alarm_group) if updated_alarm_group else None
+
 def delete_alarm_group(db: Session, device_id: int, alarm_group_id: int) -> bool:
     return device_crud.delete_alarm_group(db, device_id, alarm_group_id)
 
@@ -260,6 +276,14 @@ def update_alarm_addresses(db: Session, device_id: int, alarm_group_id: int, ala
     except Exception as e:
         print(f"Error updating alarm addresses: {e}")
         raise Exception("An error occurred while updating alarm addresses")
+
+def preview_alarm_addresses(
+    db: Session,
+    device_id: int,
+    alarm_group_id: int,
+    payload: AlarmAddressParsePreviewRequest,
+) -> AlarmAddressParsePreview:
+    return alarm_parse_rule_service.preview_alarm_addresses(db, device_id, alarm_group_id, payload)
 
 # Logging関連の関数
 def get_logging_settings(db: Session, device_id: int):

@@ -1,5 +1,4 @@
 import React, { ChangeEvent, useState, useEffect, useRef } from 'react';
-import { AlarmAddress, AlarmComment } from '../types/alarm';
 import { Button } from './ui/button';
 import {
   Select,
@@ -18,7 +17,7 @@ import { SETTINGS_LABELS } from '../localization/constants/settings-labels';
 import { MESSAGE_FORMATTER } from '../localization/utils/message-formatter';
 
 interface CSVImporterProps {
-  onImport: (addresses: AlarmAddress[], commentCount?: number) => void;
+  onImport: (csvContent: string) => void;
 }
 
 const CSVImporter: React.FC<CSVImporterProps> = ({ onImport }) => {
@@ -80,95 +79,12 @@ const CSVImporter: React.FC<CSVImporterProps> = ({ onImport }) => {
     const reader = new FileReader();
     reader.onload = (e) => {
       const csv = e.target?.result as string;
-      const { addresses, commentCount } = parseCSV(csv);
-      onImport(addresses, commentCount);
+      onImport(csv);
     };
     reader.onerror = (e) => {
       console.error(SETTINGS_LABELS.FILE_READING_ERROR, e);
     };
     reader.readAsText(file, encoding);
-  };
-
-  const parseCSV = (csv: string): { addresses: AlarmAddress[], commentCount: number } => {
-    try {
-      const lines = csv.split('\n');
-      const addresses: AlarmAddress[] = [];
-      let maxComments = 0;
-
-      // Format patterns
-      const oldFormatRegex = /\[(\d+)\]D(\d+)\s*:(\d+)/;
-      const newFormatRegex = /D(\d+)_(\d+)\s*:(\d+)/;
-      const newFormatRegex2 = /^(\d+),\[PLC\d+\](\d+\.\d{2}),\d,(.*?)(?=\s*,|$)/;
-
-    lines.slice(1).forEach((line, index) => {
-      // Skip empty lines
-      if (!line.trim()) return;
-
-      const oldFormatMatch = line.match(oldFormatRegex);
-      const newFormatMatch = line.match(newFormatRegex);
-      const newFormatMatch2 = line.match(newFormatRegex2);
-
-      if (oldFormatMatch) {
-        const [, , address, bit] = oldFormatMatch;
-        const comments: AlarmComment[] = line.split(',').slice(1).map((comment, i) => ({
-          comment_id: i + 1,
-          comment: comment.trim().replace(/^"|"$/g, ''),
-        })).filter(comment => comment.comment !== '');
-
-        maxComments = Math.max(maxComments, comments.length);
-
-        addresses.push({
-          alarm_no: index,
-          address_type: 'D',
-          address: address.padStart(4, '0'),
-          address_bit: parseInt(bit),
-          comments: comments,
-        });
-      } else if (newFormatMatch) {
-        const [, address, bit] = newFormatMatch;
-        const comments: AlarmComment[] = line.split(',').slice(1).map((comment, i) => ({
-          comment_id: i + 1,
-          comment: comment.trim().replace(/^"|"$/g, ''),
-        })).filter(comment => comment.comment !== '');
-
-        maxComments = Math.max(maxComments, comments.length);
-
-        addresses.push({
-          alarm_no: index,
-          address_type: 'D',
-          address: address.padStart(4, '0'),
-          address_bit: parseInt(bit),
-          comments: comments,
-        });
-      } else if (newFormatMatch2) {
-        const [, no, address, comment] = newFormatMatch2;
-        const addressParts = address.split('.');
-        const addressNumber = addressParts[0];
-        const bit = addressParts[1];
-
-        addresses.push({
-          alarm_no: parseInt(no),
-          address_type: '',
-          address: parseInt(addressNumber).toString().padStart(4, '0'),
-          address_bit: parseInt(bit),
-          comments: [{
-            comment_id: 1,
-            comment: comment.trim().replace(/^"|"$/g, ''),
-          }],
-        });
-
-        maxComments = Math.max(maxComments, 1);
-      }
-    });
-
-      // Sort addresses by alarm_no
-      addresses.sort((a, b) => a.alarm_no - b.alarm_no);
-
-      return { addresses, commentCount: maxComments };
-    } catch (error) {
-      console.error(SETTINGS_LABELS.CSV_PARSE_ERROR, error);
-      return { addresses: [], commentCount: 0 };
-    }
   };
 
   const handleEncodingChange = (value: string) => {

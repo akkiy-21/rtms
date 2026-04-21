@@ -32,6 +32,9 @@ import ClientEditPage from './pages/ClientEditPage';
 import AlarmGroupCreatePage from './pages/AlarmGroupCreatePage';
 import AlarmGroupEditPage from './pages/AlarmGroupEditPage';
 import AlarmAddressesPage from './pages/AlarmAddressesPage';
+import AlarmParseRulesPage from './pages/AlarmParseRulesPage';
+import AlarmParseRuleCreatePage from './pages/AlarmParseRuleCreatePage';
+import AlarmParseRuleEditPage from './pages/AlarmParseRuleEditPage';
 import LoggingSettingCreatePage from './pages/LoggingSettingCreatePage';
 import LoggingSettingEditPage from './pages/LoggingSettingEditPage';
 import LoggingDataSettingsPage from './pages/LoggingDataSettingsPage';
@@ -89,6 +92,9 @@ const App: React.FC = () => {
           <Route path="/plcs" element={<PLCsPage />} />
           <Route path="/plcs/create" element={<PLCCreatePage />} />
           <Route path="/plcs/:id/edit" element={<PLCEditPage />} />
+          <Route path="/alarm-parse-rules" element={<AlarmParseRulesPage />} />
+          <Route path="/alarm-parse-rules/create" element={<AlarmParseRuleCreatePage />} />
+          <Route path="/alarm-parse-rules/:id/edit" element={<AlarmParseRuleEditPage />} />
           <Route path="/time-table" element={<TimeTablePage />} />
           <Route path="/customers" element={<CustomersPage />} />
           <Route path="/customers/create" element={<CustomerCreatePage />} />

@@ -48,6 +48,8 @@ export function AppLayout({ children }: AppLayoutProps) {
       // PLCs関連
       '/plcs/create': '/plcs',
       '/plcs/edit': '/plcs',
+      '/alarm-parse-rules/create': '/alarm-parse-rules',
+      '/alarm-parse-rules/edit': '/alarm-parse-rules',
       // Devices関連
       '/devices/create': '/devices',
       '/devices/edit': '/devices',
@@ -78,6 +80,7 @@ export function AppLayout({ children }: AppLayoutProps) {
     const dynamicPatterns = [
       { pattern: /^\/users\/\d+\/edit$/, parent: '/users' },
       { pattern: /^\/plcs\/\d+\/edit$/, parent: '/plcs' },
+      { pattern: /^\/alarm-parse-rules\/\d+\/edit$/, parent: '/alarm-parse-rules' },
       { pattern: /^\/devices\/\d+\/edit$/, parent: '/devices' },
       { pattern: /^\/devices\/\d+\/detail-settings$/, parent: '/devices' },
       { pattern: /^\/devices\/\d+\/product-settings$/, parent: '/devices' },

@@ -9,6 +9,7 @@ from alembic.config import Config
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 from app.database import engine, Base, SQLALCHEMY_DATABASE_URL
+from app.services import alarm_parse_rule_service
 # 全モデルをインポートしてBase.metadataに登録
 from app import models
 from app.models import (
@@ -16,6 +17,8 @@ from app.models import (
     Classification,
     PLC,
     AddressRange,
+    AlarmParseRule,
+    AlarmParseRulePattern,
     CodeLengthRule,
     Manufacturer,
     CodeType
@@ -178,6 +181,13 @@ def seed_code_length_rules(session: Session):
     print(f"コード長ルール投入完了: {len(rules)}件")
 
 
+def seed_alarm_parse_rules(session: Session):
+    """アラームパースルールの初期投入"""
+    print("アラームパースルールを投入中...")
+    alarm_parse_rule_service.seed_default_alarm_parse_rules(session)
+    print("アラームパースルール投入完了")
+
+
 def stamp_alembic_head():
     """新規作成したDBを Alembic head として記録する。"""
     alembic_config = Config(str(BASE_DIR / "alembic.ini"))
@@ -207,6 +217,7 @@ def init_db(drop_existing: bool = False):
         seed_classification_data(session)
         seed_plc_data(session)
         seed_code_length_rules(session)
+        seed_alarm_parse_rules(session)
         stamp_alembic_head()
         print("\n✓ データベースの初期化が完了しました")
     except Exception as e:

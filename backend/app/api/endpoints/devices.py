@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from typing import List, Union
 
 from ...database import get_db
-from ...schemas import DeviceRegistration, DeviceOut, DeviceUpdate, DeviceRuntimeNetworkInfo, DeviceRuntimeNetworkUpdate, Client, ClientAssociation, ClientCreate, EfficiencyAddress, EfficiencyAddressCreate, EfficiencyAddressUpdate, AlarmGroup, AlarmGroupCreate, AlarmGroupUpdate, AlarmAddress, AlarmAddressCreate, AlarmComment, AlarmCommentCreate, LoggingSetting, LoggingSettingCreate, LoggingSettingUpdate, LoggingDataSetting, LoggingDataSettingCreate, LoggingDataSettingUpdate, QualityControlSignal, QualityControlSignalCreate, QualityControlSignalUpdate, DeviceProductAssociationResponse, DeviceProductAssociation, DeviceFullInfo, TimeTable, DeviceInfo
+from ...schemas import DeviceRegistration, DeviceOut, DeviceUpdate, DeviceRuntimeNetworkInfo, DeviceRuntimeNetworkUpdate, Client, ClientAssociation, ClientCreate, EfficiencyAddress, EfficiencyAddressCreate, EfficiencyAddressUpdate, AlarmGroup, AlarmGroupCreate, AlarmGroupUpdate, AlarmGroupParseRuleSelectionUpdate, AlarmAddressParsePreview, AlarmAddressParsePreviewRequest, AlarmAddress, AlarmAddressCreate, AlarmComment, AlarmCommentCreate, LoggingSetting, LoggingSettingCreate, LoggingSettingUpdate, LoggingDataSetting, LoggingDataSettingCreate, LoggingDataSettingUpdate, QualityControlSignal, QualityControlSignalCreate, QualityControlSignalUpdate, DeviceProductAssociationResponse, DeviceProductAssociation, DeviceFullInfo, TimeTable, DeviceInfo
 from ...services import device_service
 
 router = APIRouter(
@@ -190,6 +190,18 @@ async def update_alarm_group(device_id: int, alarm_group_id: int, alarm_group: A
         raise HTTPException(status_code=404, detail="Alarm group not found or could not be updated")
     return updated_alarm_group
 
+@alarm_group_router.put("/{alarm_group_id}/parse-rule", response_model=AlarmGroup)
+async def update_alarm_group_parse_rule(
+    device_id: int,
+    alarm_group_id: int,
+    payload: AlarmGroupParseRuleSelectionUpdate,
+    db: Session = Depends(get_db),
+):
+    updated_alarm_group = device_service.update_alarm_group_parse_rule_selection(db, device_id, alarm_group_id, payload)
+    if updated_alarm_group is None:
+        raise HTTPException(status_code=404, detail="Alarm group not found or could not be updated")
+    return updated_alarm_group
+
 @alarm_group_router.delete("/{alarm_group_id}", status_code=204)
 async def delete_alarm_group(device_id: int, alarm_group_id: int, db: Session = Depends(get_db)):
     success = device_service.delete_alarm_group(db, device_id, alarm_group_id)
@@ -213,6 +225,15 @@ async def create_alarm_address(device_id: int, alarm_group_id: int, alarm_addres
     if alarm_group is None:
         raise HTTPException(status_code=404, detail="Alarm group not found for this device")
     return device_service.create_alarm_address(db, alarm_group_id, alarm_address)
+
+@alarm_address_router.post("/parse-preview", response_model=AlarmAddressParsePreview)
+async def preview_alarm_addresses(
+    device_id: int,
+    alarm_group_id: int,
+    payload: AlarmAddressParsePreviewRequest,
+    db: Session = Depends(get_db),
+):
+    return device_service.preview_alarm_addresses(db, device_id, alarm_group_id, payload)
 
 # アラームアドレスの更新と削除のエンドポイントも同様に実装
 

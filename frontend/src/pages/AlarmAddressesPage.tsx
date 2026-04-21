@@ -1,8 +1,23 @@
-// AlarmAddressesPage.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { getAlarmAddresses, getAlarmGroups, getClientsForDevice, getPLC, updateAlarmAddresses, getDevice } from '../services/api';
-import { AlarmAddress, AlarmGroup, AlarmAddressFormData } from '../types/alarm';
+import {
+  getAlarmAddresses,
+  getAlarmGroups,
+  getAlarmParseRules,
+  getClientsForDevice,
+  getDevice,
+  getPLC,
+  previewAlarmAddresses,
+  updateAlarmAddresses,
+  updateAlarmGroupParseRule,
+} from '../services/api';
+import {
+  AlarmAddress,
+  AlarmAddressFormData,
+  AlarmGroup,
+  AlarmParseRule,
+  AlarmParseRuleOffsetMode,
+} from '../types/alarm';
 import { Client } from '../types/client';
 import { AddressRange } from '../types/plc';
 import { Device } from '../types/device';
@@ -23,6 +38,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from '../components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../components/ui/select';
 import { AlertCircle } from 'lucide-react';
 import { ALARM_LABELS } from '@/localization/constants/alarm-labels';
 import { ACTION_LABELS } from '@/localization/constants/action-labels';
@@ -36,6 +58,9 @@ const AlarmAddressesPage: React.FC = () => {
   const [alarmGroup, setAlarmGroup] = useState<AlarmGroup | null>(null);
   const [client, setClient] = useState<Client | null>(null);
   const [device, setDevice] = useState<Device | null>(null);
+  const [parseRules, setParseRules] = useState<AlarmParseRule[]>([]);
+  const [selectedParseRuleId, setSelectedParseRuleId] = useState<number | null>(null);
+  const [offsetMode, setOffsetMode] = useState<AlarmParseRuleOffsetMode>('row_index_word');
   const [addressRanges, setAddressRanges] = useState<AddressRange[]>([]);
   const [isOffsetEnabled, setIsOffsetEnabled] = useState(false);
   const [offsetAddress, setOffsetAddress] = useState('0');
@@ -43,55 +68,115 @@ const AlarmAddressesPage: React.FC = () => {
   const [openEnableDialog, setOpenEnableDialog] = useState(false);
   const [openDisableDialog, setOpenDisableDialog] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isParsing, setIsParsing] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
-  const [isNewCSVFormat, setIsNewCSVFormat] = useState(false);
+  const [parseError, setParseError] = useState<string | null>(null);
+  const [parseWarnings, setParseWarnings] = useState<string[]>([]);
 
   useEffect(() => {
     fetchData();
   }, [deviceId, groupId]);
 
   const fetchData = async () => {
-    if (deviceId && groupId) {
-      const [fetchedAddresses, fetchedGroups, fetchedClients, fetchedDevice] = await Promise.all([
-        getAlarmAddresses(parseInt(deviceId), parseInt(groupId)),
-        getAlarmGroups(parseInt(deviceId)),
-        getClientsForDevice(parseInt(deviceId)),
-        getDevice(parseInt(deviceId))
-      ]);
-      
-      // コメントが含まれていることを確認
-      setAddresses(fetchedAddresses.map(addr => ({
-        ...addr,
-        comments: addr.comments || [] // コメントがない場合は空の配列を設定
-      })));
-      
-      const group = fetchedGroups.find(g => g.id === parseInt(groupId));
-      setAlarmGroup(group || null);
-      setDevice(fetchedDevice);
-      
-      if (group) {
-        const groupClient = fetchedClients.find(c => c.id === group.client_id);
-        setClient(groupClient || null);
-        
-        if (groupClient) {
-          const plc = await getPLC(groupClient.plc.id);
-          setAddressRanges(plc.address_ranges);
-          if (plc.address_ranges.length > 0) {
-            setOffsetAddressType(plc.address_ranges[0].address_type);
-          }
+    if (!deviceId || !groupId) {
+      return;
+    }
+
+    const numericDeviceId = parseInt(deviceId, 10);
+    const numericGroupId = parseInt(groupId, 10);
+    const [fetchedAddresses, fetchedGroups, fetchedClients, fetchedDevice, fetchedParseRules] = await Promise.all([
+      getAlarmAddresses(numericDeviceId, numericGroupId),
+      getAlarmGroups(numericDeviceId),
+      getClientsForDevice(numericDeviceId),
+      getDevice(numericDeviceId),
+      getAlarmParseRules(),
+    ]);
+
+    setAddresses(
+      fetchedAddresses.map((address) => ({
+        ...address,
+        comments: address.comments || [],
+      })),
+    );
+    setParseRules(fetchedParseRules);
+
+    const group = fetchedGroups.find((item) => item.id === numericGroupId) || null;
+    setAlarmGroup(group);
+    setSelectedParseRuleId(group?.selected_parse_rule_id ?? null);
+    setDevice(fetchedDevice);
+
+    const selectedRule = fetchedParseRules.find((rule) => rule.id === group?.selected_parse_rule_id);
+    setOffsetMode(selectedRule?.offset_mode ?? 'row_index_word');
+
+    if (group) {
+      const groupClient = fetchedClients.find((item) => item.id === group.client_id) || null;
+      setClient(groupClient);
+
+      if (groupClient) {
+        const plc = await getPLC(groupClient.plc.id);
+        setAddressRanges(plc.address_ranges);
+        if (plc.address_ranges.length > 0) {
+          setOffsetAddressType(plc.address_ranges[0].address_type);
         }
       }
     }
   };
 
-  const handleCSVImport = (importedAddresses: AlarmAddress[], commentCount?: number) => {
-    // 新しいCSVフォーマットの判別
-    const isNewFormat = importedAddresses.some(addr => addr.address.includes('.'));
-    setIsNewCSVFormat(isNewFormat);
-    setAddresses(importedAddresses);
+  const handleParseRuleChange = async (value: string) => {
+    if (!deviceId || !groupId) {
+      return;
+    }
+
+    const ruleId = parseInt(value, 10);
+    const selectedRule = parseRules.find((rule) => rule.id === ruleId);
+
+    setParseError(null);
+    setParseWarnings([]);
+    setAddresses([]);
+    setSelectedParseRuleId(ruleId);
+    setOffsetMode(selectedRule?.offset_mode ?? 'row_index_word');
+
+    try {
+      const updatedGroup = await updateAlarmGroupParseRule(parseInt(deviceId, 10), parseInt(groupId, 10), {
+        selected_parse_rule_id: ruleId,
+      });
+      setAlarmGroup(updatedGroup);
+    } catch (error) {
+      console.error('Error updating alarm parse rule selection:', error);
+      setParseError('パースルールの選択保存に失敗しました');
+    }
   };
 
+  const handleCSVImport = async (csvContent: string) => {
+    if (!deviceId || !groupId || selectedParseRuleId === null) {
+      setParseError('CSVを取り込む前にパースルールを選択してください');
+      return;
+    }
 
+    setIsParsing(true);
+    setParseError(null);
+    setParseWarnings([]);
+
+    try {
+      const preview = await previewAlarmAddresses(parseInt(deviceId, 10), parseInt(groupId, 10), {
+        csv_content: csvContent,
+        parse_rule_id: selectedParseRuleId,
+      });
+      setAddresses(
+        preview.addresses.map((address) => ({
+          ...address,
+          comments: address.comments || [],
+        })),
+      );
+      setParseWarnings(preview.warnings || []);
+      setOffsetMode(preview.offset_mode);
+    } catch (error) {
+      console.error('Error previewing alarm addresses:', error);
+      setParseError('CSVのプレビューに失敗しました');
+    } finally {
+      setIsParsing(false);
+    }
+  };
 
   const handleConfirmEnable = () => {
     setIsOffsetEnabled(true);
@@ -101,7 +186,7 @@ const AlarmAddressesPage: React.FC = () => {
   const handleConfirmDisable = () => {
     setIsOffsetEnabled(false);
     setOffsetAddress('0');
-    setAddresses([]); // Reset addresses
+    setAddresses([]);
     setOpenDisableDialog(false);
   };
 
@@ -116,56 +201,58 @@ const AlarmAddressesPage: React.FC = () => {
   };
 
   const applyOffset = (originalAddresses: AlarmAddress[]): AlarmAddress[] => {
-    if (!isOffsetEnabled) return originalAddresses;
+    if (!isOffsetEnabled) {
+      return originalAddresses;
+    }
 
-    const selectedRange = addressRanges.find(range => range.address_type === offsetAddressType);
-    if (!selectedRange) return originalAddresses;
+    const selectedRange = addressRanges.find((range) => range.address_type === offsetAddressType);
+    if (!selectedRange) {
+      return originalAddresses;
+    }
 
-    const offsetValue = parseInt(offsetAddress, selectedRange.numerical_base === 'hex' ? 16 : 10);
+    const base = selectedRange.numerical_base === 'hex' ? 16 : 10;
+    const offsetValue = parseInt(offsetAddress, base);
+    if (Number.isNaN(offsetValue)) {
+      return originalAddresses;
+    }
 
-    return originalAddresses.map((addr, index) => {
-      const originalAddressValue = parseInt(addr.address, 10);
-
-      let newAddressValue;
-      if (isNewCSVFormat) {
-        // 新しいCSVフォーマットの場合
-        newAddressValue = originalAddressValue + offsetValue;
-      } else {
-        // 既存のCSVフォーマットの場合
-        newAddressValue = Math.floor(index / 16) + offsetValue;
-      }
-
-      let newBit = index % 16;
-
-      let newAddress: string;
-      if (selectedRange.numerical_base === 'hex') {
-        newAddress = newAddressValue.toString(16).toUpperCase().padStart(4, '0');
-      } else {
-        newAddress = newAddressValue.toString().padStart(4, '0');
-      }
+    return originalAddresses.map((address, index) => {
+      const originalAddressValue = parseInt(address.address, base);
+      const nextAddressValue = offsetMode === 'preserve_address'
+        ? (Number.isNaN(originalAddressValue) ? offsetValue : originalAddressValue + offsetValue)
+        : Math.floor(index / 16) + offsetValue;
+      const nextBit = offsetMode === 'preserve_address' ? address.address_bit : index % 16;
+      const nextAddress = selectedRange.numerical_base === 'hex'
+        ? nextAddressValue.toString(16).toUpperCase().padStart(4, '0')
+        : nextAddressValue.toString().padStart(4, '0');
 
       return {
-        ...addr,
+        ...address,
         address_type: offsetAddressType,
-        address: newAddress,
-        address_bit: newBit,
+        address: nextAddress,
+        address_bit: nextBit,
       };
     });
   };
 
   const handleSave = async () => {
+    if (!deviceId || !groupId) {
+      return;
+    }
+
     setIsSaving(true);
     setSaveError(null);
+
     try {
-      const formDataList: AlarmAddressFormData[] = displayAddresses.map(address => ({
+      const formDataList: AlarmAddressFormData[] = displayAddresses.map((address) => ({
         alarm_no: address.alarm_no,
         address_type: address.address_type,
         address: address.address,
         address_bit: address.address_bit,
-        comments: address.comments
+        comments: address.comments,
       }));
-  
-      await updateAlarmAddresses(parseInt(deviceId!), parseInt(groupId!), formDataList);
+
+      await updateAlarmAddresses(parseInt(deviceId, 10), parseInt(groupId, 10), formDataList);
       await fetchData();
     } catch (error) {
       console.error('Error saving alarm addresses:', error);
@@ -193,13 +280,34 @@ const AlarmAddressesPage: React.FC = () => {
 
       <Card>
         <CardContent className="pt-6 space-y-6">
-          {/* CSV Importer */}
+          <div className="space-y-2">
+            <Label htmlFor="alarm-parse-rule">パースルール</Label>
+            <Select value={selectedParseRuleId?.toString() ?? ''} onValueChange={handleParseRuleChange}>
+              <SelectTrigger id="alarm-parse-rule" className="w-full md:w-[360px]">
+                <SelectValue placeholder="パースルールを選択してください" />
+              </SelectTrigger>
+              <SelectContent>
+                {parseRules.filter((rule) => rule.is_active).map((rule) => (
+                  <SelectItem key={rule.id} value={rule.id.toString()}>
+                    {rule.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {selectedParseRuleId === null && (
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>CSVを取り込む前にパースルールを選択してください。</AlertDescription>
+            </Alert>
+          )}
+
           <div>
             <h3 className="text-lg font-semibold mb-4">CSV{ACTION_LABELS.IMPORT}</h3>
             <CSVImporter onImport={handleCSVImport} />
           </div>
 
-          {/* Address Offset Toggle */}
           <div className="flex items-center space-x-2">
             <Switch
               id="offset-toggle"
@@ -215,33 +323,44 @@ const AlarmAddressesPage: React.FC = () => {
             <Label htmlFor="offset-toggle">{ALARM_LABELS.FIELDS.OFFSET_ADDRESS}を有効にする</Label>
           </div>
 
-          {/* Address Offset Form */}
           {isOffsetEnabled && client && (
             <AddressOffsetForm
-              addressRanges={addressRanges.filter(range => range.data_type === 'word')}
+              addressRanges={addressRanges.filter((range) => range.data_type === 'word')}
               onOffsetChange={handleOffsetChange}
             />
+          )}
+
+          {parseError && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{parseError}</AlertDescription>
+            </Alert>
+          )}
+
+          {parseWarnings.length > 0 && (
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{parseWarnings.join(' / ')}</AlertDescription>
+            </Alert>
           )}
         </CardContent>
       </Card>
 
-      {/* Alarm Address List */}
       <Card>
         <CardContent className="pt-6">
           <AlarmAddressList addresses={displayAddresses} />
         </CardContent>
       </Card>
 
-      {/* Save Button and Error Message */}
       <div className="flex flex-col gap-4">
         <Button
           onClick={handleSave}
-          disabled={isSaving}
+          disabled={isSaving || isParsing || displayAddresses.length === 0}
           className="w-full sm:w-auto"
         >
-          {isSaving ? MESSAGE_FORMATTER.SAVING() : `変更を${ACTION_LABELS.SAVE}`}
+          {isSaving ? MESSAGE_FORMATTER.SAVING() : isParsing ? 'プレビュー中...' : `変更を${ACTION_LABELS.SAVE}`}
         </Button>
-        
+
         {saveError && (
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
@@ -250,7 +369,6 @@ const AlarmAddressesPage: React.FC = () => {
         )}
       </div>
 
-      {/* Enable Offset Dialog */}
       <Dialog open={openEnableDialog} onOpenChange={setOpenEnableDialog}>
         <DialogContent>
           <DialogHeader>
@@ -272,7 +390,6 @@ const AlarmAddressesPage: React.FC = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Disable Offset Dialog */}
       <Dialog open={openDisableDialog} onOpenChange={setOpenDisableDialog}>
         <DialogContent>
           <DialogHeader>

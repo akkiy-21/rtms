@@ -182,16 +182,60 @@ class DeviceClientIO(Base):
     device = relationship("Devices", back_populates="io_settings")
     client = relationship("Clients")
 
+class AlarmParseRule(Base):
+    __tablename__ = 'alarm_parse_rules'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String(100), unique=True, nullable=False)
+    description = Column(Text, nullable=True)
+    is_active = Column(Boolean, nullable=False, default=True)
+    skip_header_rows = Column(Integer, nullable=False, default=1)
+    offset_mode = Column(String(50), nullable=False, default='row_index_word')
+
+    patterns = relationship(
+        "AlarmParseRulePattern",
+        back_populates="rule",
+        cascade="all, delete-orphan",
+        order_by="AlarmParseRulePattern.sort_order",
+    )
+    alarm_groups = relationship("AlarmGroups", back_populates="selected_parse_rule")
+
+class AlarmParseRulePattern(Base):
+    __tablename__ = 'alarm_parse_rule_patterns'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    rule_id = Column(Integer, ForeignKey('alarm_parse_rules.id', ondelete='CASCADE'), nullable=False)
+    pattern_name = Column(String(100), nullable=False)
+    sort_order = Column(Integer, nullable=False, default=0)
+    regex_pattern = Column(Text, nullable=False)
+    address_type_value = Column(String(50), nullable=True)
+    address_type_group = Column(Integer, nullable=True)
+    alarm_no_mode = Column(String(50), nullable=False, default='line_index')
+    alarm_no_group = Column(Integer, nullable=True)
+    alarm_no_offset = Column(Integer, nullable=False, default=0)
+    address_group = Column(Integer, nullable=True)
+    bit_group = Column(Integer, nullable=True)
+    combined_address_bit_group = Column(Integer, nullable=True)
+    combined_address_bit_separator = Column(String(10), nullable=False, default='.')
+    comment_mode = Column(String(50), nullable=False, default='none')
+    comment_group = Column(Integer, nullable=True)
+    comment_columns_start = Column(Integer, nullable=True)
+    address_pad_length = Column(Integer, nullable=False, default=4)
+
+    rule = relationship("AlarmParseRule", back_populates="patterns")
+
 class AlarmGroups(Base):
     __tablename__ = 'alarm_groups'
     id = Column(Integer, primary_key=True, autoincrement=True)
     device_id = Column(Integer, ForeignKey('devices.id'))
     client_id = Column(Integer, ForeignKey('clients.id'))
     name = Column(String(100))
+    selected_parse_rule_id = Column(Integer, ForeignKey('alarm_parse_rules.id', ondelete='SET NULL'), nullable=True)
 
     device = relationship("Devices", back_populates="alarm_groups")
     client = relationship("Clients", back_populates="alarm_groups")
     alarm_addresses = relationship("AlarmAddresses", back_populates="alarm_group", cascade="all, delete-orphan")
+    selected_parse_rule = relationship("AlarmParseRule", back_populates="alarm_groups")
 
 class AlarmAddresses(Base):
     __tablename__ = 'alarm_addresses'

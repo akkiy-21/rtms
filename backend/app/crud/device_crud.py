@@ -206,6 +206,21 @@ def update_alarm_group(db: Session, device_id: int, alarm_group_id: int, alarm_g
         db.refresh(db_alarm_group)
     return db_alarm_group
 
+def update_alarm_group_parse_rule_selection(
+    db: Session,
+    device_id: int,
+    alarm_group_id: int,
+    selected_parse_rule_id: Optional[int],
+) -> Optional[AlarmGroups]:
+    db_alarm_group = get_alarm_group(db, device_id, alarm_group_id)
+    if db_alarm_group is None:
+        return None
+
+    db_alarm_group.selected_parse_rule_id = selected_parse_rule_id
+    db.commit()
+    db.refresh(db_alarm_group)
+    return db_alarm_group
+
 def delete_alarm_group(db: Session, device_id: int, alarm_group_id: int) -> bool:
     db_alarm_group = get_alarm_group(db, device_id, alarm_group_id)
     if db_alarm_group:

@@ -9,6 +9,7 @@ import {
   Building2,
   Package,
   Download,
+  Bell,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { NAVIGATION_LABELS } from '@/localization';
@@ -54,6 +55,11 @@ export function Sidebar({ onNavigate }: SidebarProps) {
       label: NAVIGATION_LABELS.PLCS,
       href: '/plcs',
       icon: <Cpu className="w-4 h-4" />,
+    },
+    {
+      label: NAVIGATION_LABELS.ALARM_PARSE_RULES,
+      href: '/alarm-parse-rules',
+      icon: <Bell className="w-4 h-4" />,
     },
     {
       label: NAVIGATION_LABELS.TIME_TABLE,
