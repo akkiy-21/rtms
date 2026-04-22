@@ -18,6 +18,8 @@
 - **SQLAlchemy** - ORM
 - **PostgreSQL** - データベース
 - **MQTT** - リアルタイムメッセージング
+- **Celery** + **Redis** - デバイス再起動、シャットダウン、アプリ配信などの非同期ジョブ実行
+- **Paramiko** - SSH / SFTP によるデバイス操作
 
 ## プロジェクト構成
 
@@ -43,6 +45,8 @@ rtms-monorepo/
 ├── backend/                     # FastAPI + Python バックエンド
 │   ├── app/
 │   │   ├── mqtt_worker.py      # MQTT メッセージ処理（独立プロセス）
+│   │   ├── celery_app.py       # Celery 設定
+│   │   ├── tasks/              # 非同期ジョブ
 │   │   └── main.py             # FastAPI アプリケーション
 ├── package.json                 # ルート package.json (npm workspaces)
 └── README.md
@@ -59,19 +63,29 @@ MQTT メッセージは **独立したワーカープロセス** (`mqtt_worker.p
 
 この設計により、FastAPI を複数ワーカーで起動しても、MQTT メッセージは1回だけ処理されます。
 
+### デバイス操作ジョブ
+
+デバイスの再起動、シャットダウン、rtms-client 配信は **Celery ワーカー** で非同期実行されます。
+
+- **FastAPI サーバー**: ジョブ登録 API、リリース管理 API を提供
+- **Celery ワーカー**: SSH / SFTP を使ってデバイス操作を実行
+- **Redis**: Celery の broker / result backend
+
+この分離により、HTTP 応答と長時間かかるデバイス操作を切り離しつつ、MQTT 常駐処理も独立した責務のまま維持できます。
+
 ## 必要な環境
 
 - Node.js (v18以上推奨)
 - Python 3.12以上
 - uv (Python パッケージマネージャー)
-- Docker & Docker Compose (PostgreSQL用)
+- Docker & Docker Compose (PostgreSQL、Mosquitto、Redis 用)
 
 ## セットアップ
 
-### 1. PostgreSQL と Mosquitto の起動
+### 1. PostgreSQL、Mosquitto、Redis の起動
 
 ```bash
-# Docker Compose で PostgreSQL と Mosquitto (MQTT ブローカー) を起動
+# Docker Compose で PostgreSQL、Mosquitto (MQTT ブローカー)、Redis を起動
 docker-compose up -d
 ```
 
@@ -114,16 +128,22 @@ npx shadcn-ui@latest add calendar
 
 ### 3. データベースの初期化
 
+新規 DB と既存 DB で手順が異なります。
+
 ```bash
-# 初回のみ: テーブル作成とシードデータ投入
+# 新規 DB: テーブル作成、初期管理者作成、Alembic head へ stamp
 cd backend
 uv run python -m app.init_db
+
+# 既存 DB: 最新 schema へ migration
+uv run alembic upgrade head
 
 # 既存データを削除して再初期化する場合
 uv run python -m app.init_db --drop
 ```
 
 初期管理者は .env の RTMS_INITIAL_ADMIN_ID と RTMS_INITIAL_ADMIN_PASSWORD から作成されます。未設定の場合、初期化は失敗します。
+既存データベースに対しては、単発 migration script ではなく Alembic を使って更新してください。
 
 ### 4. 開発サーバーの起動
 
@@ -134,11 +154,15 @@ npm run mqtt:worker
 # ターミナル2: バックエンド API サーバー
 npm run backend:dev
 
-# ターミナル3: フロントエンド
+# ターミナル3: Celery ワーカー（デバイス再起動、シャットダウン、アプリ配信に必須）
+npm run celery:worker
+
+# ターミナル4: フロントエンド
 npm run frontend:start
 ```
 
 **重要**: MQTT ワーカーは必ず起動してください。これがないと MQTT メッセージが処理されません。
+**重要**: デバイス再起動、シャットダウン、rtms-client 配信を使う場合は Celery ワーカーも必ず起動してください。
 
 ## 利用可能なスクリプト
 
@@ -153,16 +177,20 @@ npm run frontend:start
 
 ### バックエンド
 - `npm run backend:start` - API サーバー起動（uvicorn、開発用）
-- `npm run backend:dev` - API サーバー起動（本番用、4ワーカー）
+- `npm run backend:dev` - API サーバー起動（Windows は 1 worker、それ以外は既定で 4 workers）
+- `npm run celery:worker` - Celery ワーカー起動（デバイス操作ジョブ用）
 - `npm run mqtt:worker` - MQTT ワーカー起動（必須）
 - `cd backend && uv run python -m app.init_db` - データベース初期化
 - `cd backend && uv run python -m app.init_db --drop` - データベース再初期化
+- `cd backend && uv run alembic upgrade head` - 既存 DB を最新 schema へ migration
+- `cd backend && uv run alembic current` - 現在の Alembic revision を確認
 
 ### Docker
-- `docker-compose up -d` - PostgreSQL と Mosquitto 起動
+- `docker-compose up -d` - PostgreSQL、Mosquitto、Redis 起動
 - `docker-compose down` - コンテナ停止
 - `docker-compose logs -f postgres` - PostgreSQL ログ確認
 - `docker-compose logs -f mosquitto` - Mosquitto ログ確認
+- `docker-compose logs -f redis` - Redis ログ確認
 
 ## 開発ガイド
 
