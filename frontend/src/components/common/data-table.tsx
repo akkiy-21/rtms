@@ -3,6 +3,7 @@ import {
   ColumnDef,
   ColumnFiltersState,
   SortingState,
+  Table as TanstackTable,
   VisibilityState,
   flexRender,
   getCoreRowModel,
@@ -32,6 +33,10 @@ interface DataTableProps<TData, TValue> {
   searchPlaceholder?: string;
   onRowClick?: (row: TData) => void;
   isLoading?: boolean;
+  enableRowSelection?: boolean;
+  getRowId?: (row: TData, index: number) => string;
+  onSelectedRowsChange?: (rows: TData[]) => void;
+  toolbar?: React.ReactNode | ((table: TanstackTable<TData>) => React.ReactNode);
 }
 
 export function DataTable<TData, TValue>({
@@ -41,6 +46,10 @@ export function DataTable<TData, TValue>({
   searchPlaceholder = DEFAULT_SEARCH_PLACEHOLDER,
   onRowClick,
   isLoading = false,
+  enableRowSelection = false,
+  getRowId,
+  onSelectedRowsChange,
+  toolbar,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
@@ -58,6 +67,8 @@ export function DataTable<TData, TValue>({
     onColumnFiltersChange: setColumnFilters,
     onColumnVisibilityChange: setColumnVisibility,
     onRowSelectionChange: setRowSelection,
+    enableRowSelection,
+    getRowId,
     state: {
       sorting,
       columnFilters,
@@ -66,18 +77,27 @@ export function DataTable<TData, TValue>({
     },
   });
 
+  React.useEffect(() => {
+    onSelectedRowsChange?.(table.getSelectedRowModel().rows.map((row) => row.original));
+  }, [onSelectedRowsChange, rowSelection, table]);
+
   return (
     <div className="space-y-4">
-      {searchKey && (
-        <div className="flex items-center">
-          <Input
-            placeholder={searchPlaceholder}
-            value={(table.getColumn(searchKey)?.getFilterValue() as string) ?? ""}
-            onChange={(event) =>
-              table.getColumn(searchKey)?.setFilterValue(event.target.value)
-            }
-            className="max-w-sm"
-          />
+      {(searchKey || toolbar) && (
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          {searchKey ? (
+            <Input
+              placeholder={searchPlaceholder}
+              value={(table.getColumn(searchKey)?.getFilterValue() as string) ?? ""}
+              onChange={(event) =>
+                table.getColumn(searchKey)?.setFilterValue(event.target.value)
+              }
+              className="max-w-sm"
+            />
+          ) : (
+            <div />
+          )}
+          {typeof toolbar === 'function' ? toolbar(table) : toolbar}
         </div>
       )}
       <div className="rounded-md border">

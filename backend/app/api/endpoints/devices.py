@@ -1,16 +1,80 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 from typing import List, Union
 
 from ...auth import require_admin_user, require_authenticated_user
 from ...database import get_db
-from ...schemas import DeviceRegistration, DeviceOut, DeviceUpdate, DeviceRuntimeNetworkInfo, DeviceRuntimeNetworkUpdate, Client, ClientAssociation, ClientCreate, EfficiencyAddress, EfficiencyAddressCreate, EfficiencyAddressUpdate, AlarmGroup, AlarmGroupCreate, AlarmGroupUpdate, AlarmGroupParseRuleSelectionUpdate, AlarmAddressParsePreview, AlarmAddressParsePreviewRequest, AlarmAddress, AlarmAddressCreate, AlarmComment, AlarmCommentCreate, LoggingSetting, LoggingSettingCreate, LoggingSettingUpdate, LoggingDataSetting, LoggingDataSettingCreate, LoggingDataSettingUpdate, QualityControlSignal, QualityControlSignalCreate, QualityControlSignalUpdate, DeviceProductAssociationResponse, DeviceProductAssociation, DeviceFullInfo, TimeTable, DeviceInfo
+from ...models import Users
+from ...schemas import DeviceRegistration, DeviceOut, DeviceUpdate, DeviceRuntimeNetworkInfo, DeviceRuntimeNetworkUpdate, Client, ClientAssociation, ClientCreate, EfficiencyAddress, EfficiencyAddressCreate, EfficiencyAddressUpdate, AlarmGroup, AlarmGroupCreate, AlarmGroupUpdate, AlarmGroupParseRuleSelectionUpdate, AlarmAddressParsePreview, AlarmAddressParsePreviewRequest, AlarmAddress, AlarmAddressCreate, AlarmComment, AlarmCommentCreate, LoggingSetting, LoggingSettingCreate, LoggingSettingUpdate, LoggingDataSetting, LoggingDataSettingCreate, LoggingDataSettingUpdate, QualityControlSignal, QualityControlSignalCreate, QualityControlSignalUpdate, DeviceProductAssociationResponse, DeviceProductAssociation, DeviceFullInfo, TimeTable, DeviceInfo, AppReleaseOut, DeviceActionJobOut, DeviceActionJobRequest, DeviceDeployJobRequest
 from ...services import device_service
+from ...services.app_release_service import create_app_release, get_app_release, list_app_releases
+from ...services.device_action_service import create_deploy_job, create_device_action_job, get_device_action_job, list_device_action_jobs
 
 router = APIRouter(
     prefix="/devices",
     tags=["devices"]
 )
+
+
+@router.post("/releases", response_model=AppReleaseOut)
+async def upload_release(
+    version: str = Form(...),
+    notes: str | None = Form(default=None),
+    artifact: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: Users = Depends(require_admin_user),
+):
+    return await create_app_release(
+        db=db,
+        uploaded_by=current_user.id,
+        version=version,
+        artifact=artifact,
+        notes=notes,
+    )
+
+
+@router.get("/releases", response_model=List[AppReleaseOut], dependencies=[Depends(require_admin_user)])
+async def get_releases(db: Session = Depends(get_db)):
+    return list_app_releases(db)
+
+
+@router.get("/releases/{release_id}", response_model=AppReleaseOut, dependencies=[Depends(require_admin_user)])
+async def get_release(release_id: int, db: Session = Depends(get_db)):
+    release = get_app_release(db, release_id)
+    if release is None:
+        raise HTTPException(status_code=404, detail="Release not found")
+    return release
+
+
+@router.post("/actions", response_model=DeviceActionJobOut)
+async def enqueue_device_action(
+    payload: DeviceActionJobRequest,
+    db: Session = Depends(get_db),
+    current_user: Users = Depends(require_admin_user),
+):
+    return create_device_action_job(db, current_user.id, payload)
+
+
+@router.post("/actions/deploy", response_model=DeviceActionJobOut)
+async def enqueue_deploy_action(
+    payload: DeviceDeployJobRequest,
+    db: Session = Depends(get_db),
+    current_user: Users = Depends(require_admin_user),
+):
+    return create_deploy_job(db, current_user.id, payload)
+
+
+@router.get("/actions", response_model=List[DeviceActionJobOut], dependencies=[Depends(require_admin_user)])
+async def get_device_actions(db: Session = Depends(get_db)):
+    return list_device_action_jobs(db)
+
+
+@router.get("/actions/{job_id}", response_model=DeviceActionJobOut, dependencies=[Depends(require_admin_user)])
+async def get_device_action(job_id: int, db: Session = Depends(get_db)):
+    job = get_device_action_job(db, job_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="Device action job not found")
+    return job
 
 @router.post("", response_model=DeviceOut, status_code=201, dependencies=[Depends(require_admin_user)])
 async def register_device(registration: DeviceRegistration, db: Session = Depends(get_db)):

@@ -31,6 +31,121 @@ class DeviceUpdate(BaseModel):
     ssh_password: Optional[str] = None
     standard_cycle_time: Optional[float] = None
 
+
+class ManagedAppName(str, Enum):
+    RTMS_CLIENT = "rtms-client"
+
+
+class AppReleaseStatus(str, Enum):
+    READY = "ready"
+    ARCHIVED = "archived"
+
+
+class DeviceActionType(str, Enum):
+    REBOOT = "reboot"
+    SHUTDOWN = "shutdown"
+    DEPLOY_RTMS_CLIENT = "deploy_rtms_client"
+
+
+class DeviceActionJobStatus(str, Enum):
+    QUEUED = "queued"
+    RUNNING = "running"
+    SUCCEEDED = "succeeded"
+    FAILED = "failed"
+    PARTIAL = "partial"
+
+
+class DeviceActionJobItemStatus(str, Enum):
+    QUEUED = "queued"
+    RUNNING = "running"
+    SUCCEEDED = "succeeded"
+    FAILED = "failed"
+    SKIPPED = "skipped"
+
+
+class DeviceActionJobSummary(BaseModel):
+    total_items: int = 0
+    queued_items: int = 0
+    succeeded_items: int = 0
+    failed_items: int = 0
+    skipped_items: int = 0
+
+
+class AppReleaseBase(BaseModel):
+    app_name: ManagedAppName = ManagedAppName.RTMS_CLIENT
+    version: str
+    platform: str = "linux-arm64"
+    filename: str
+    sha256: str
+    file_size: int
+    notes: Optional[str] = None
+
+
+class AppReleaseCreate(AppReleaseBase):
+    storage_path: str
+
+
+class AppReleaseOut(AppReleaseBase):
+    id: int
+    status: AppReleaseStatus
+    storage_path: str
+    uploaded_by: Optional[str] = None
+    uploaded_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class DeviceActionJobRequest(BaseModel):
+    action_type: DeviceActionType
+    device_ids: List[int] = Field(min_length=1)
+    scope: str = "selection"
+
+
+class DeviceDeployJobRequest(BaseModel):
+    device_ids: List[int] = Field(min_length=1)
+    release_id: int
+    scope: str = "selection"
+
+
+class DeviceActionJobItemOut(BaseModel):
+    id: int
+    job_id: int
+    device_id: int
+    device_name: Optional[str] = None
+    mac_address: Optional[str] = None
+    last_known_ip_address: Optional[str] = None
+    ssh_username: Optional[str] = None
+    status: DeviceActionJobItemStatus
+    result_message: Optional[str] = None
+    remote_artifact_path: Optional[str] = None
+    started_at: Optional[datetime] = None
+    finished_at: Optional[datetime] = None
+    attempt_count: int
+    metadata_json: Optional[dict] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class DeviceActionJobOut(BaseModel):
+    id: int
+    action_type: DeviceActionType
+    status: DeviceActionJobStatus
+    scope: str
+    requested_by: Optional[str] = None
+    release_id: Optional[int] = None
+    requested_at: datetime
+    started_at: Optional[datetime] = None
+    finished_at: Optional[datetime] = None
+    total_items: int
+    queued_items: int
+    succeeded_items: int
+    failed_items: int
+    skipped_items: int
+    error_message: Optional[str] = None
+    items: List[DeviceActionJobItemOut] = []
+
+    model_config = ConfigDict(from_attributes=True)
+
 class DeviceRuntimeNetworkUpdate(BaseModel):
     last_known_ip_address: IPvAnyAddress
 

@@ -1,6 +1,6 @@
 // api.ts
 import axios from 'axios';
-import { Device, DeviceFormData, PairingDeviceRegistrationData, PairingDeviceReassignmentData, PairingInfo } from '../types/device';
+import { AppRelease, Device, DeviceActionJob, DeviceActionJobRequest, DeviceDeployJobRequest, DeviceFormData, PairingDeviceRegistrationData, PairingDeviceReassignmentData, PairingInfo } from '../types/device';
 import { Classification, ClassificationGroup, ClassificationUpdate } from '../types/classification';
 import { PLCFormDataWithAddressRanges, PLCWithAddressRanges } from '../types/plc';
 import { TimeTable, TimeTableRequest } from '../types/timeTable';
@@ -135,6 +135,47 @@ export const reassignDeviceByPairing = async (deviceId: number, payload: Pairing
 
 export const deleteDevice = async (id: number): Promise<void> => {
   await axios.delete(`${API_BASE_URL}/devices/${id}`);
+};
+
+export const listAppReleases = async (): Promise<AppRelease[]> => {
+  const response = await axios.get(`${API_BASE_URL}/devices/releases`);
+  return response.data;
+};
+
+export const uploadAppRelease = async (version: string, artifact: File, notes?: string): Promise<AppRelease> => {
+  const formData = new FormData();
+  formData.append('version', version);
+  formData.append('artifact', artifact);
+  if (notes) {
+    formData.append('notes', notes);
+  }
+
+  const response = await axios.post(`${API_BASE_URL}/devices/releases`, formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+  return response.data;
+};
+
+export const createDeviceActionJob = async (payload: DeviceActionJobRequest): Promise<DeviceActionJob> => {
+  const response = await axios.post(`${API_BASE_URL}/devices/actions`, payload);
+  return response.data;
+};
+
+export const createDeviceDeployJob = async (payload: DeviceDeployJobRequest): Promise<DeviceActionJob> => {
+  const response = await axios.post(`${API_BASE_URL}/devices/actions/deploy`, payload);
+  return response.data;
+};
+
+export const listDeviceActionJobs = async (): Promise<DeviceActionJob[]> => {
+  const response = await axios.get(`${API_BASE_URL}/devices/actions`);
+  return response.data;
+};
+
+export const getDeviceActionJob = async (jobId: number): Promise<DeviceActionJob> => {
+  const response = await axios.get(`${API_BASE_URL}/devices/actions/${jobId}`);
+  return response.data;
 };
 
 // classification

@@ -8,7 +8,7 @@ import { DataTableColumnHeader } from '@/components/common/data-table-column-hea
 import { ActionButtons } from '@/components/common/action-buttons';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Eye, EyeOff, Settings } from 'lucide-react';
+import { Eye, EyeOff, RotateCcw, Settings, Upload } from 'lucide-react';
 import { DEVICE_LABELS } from '@/localization/constants/device-labels';
 import { TECHNICAL_TERMS } from '@/localization/constants/technical-terms';
 
@@ -38,7 +38,9 @@ const PasswordCell: React.FC<{ password: string | null }> = ({ password }) => {
 export const createDeviceColumns = (
   onEdit: (id: number) => void,
   onDelete: (id: number) => void,
-  onDetailSettings: (id: number) => void
+  onDetailSettings: (id: number) => void,
+  onReboot: (device: Device) => void,
+  onDeploy: (device: Device) => void,
 ): ColumnDef<Device>[] => {
   return [
     {
@@ -118,6 +120,18 @@ export const createDeviceColumns = (
                 onClick: () => onDetailSettings(device.id),
                 variant: 'ghost',
                 icon: <Settings className="h-4 w-4" />,
+              },
+              {
+                label: '再起動',
+                onClick: () => onReboot(device),
+                variant: 'ghost',
+                icon: <RotateCcw className="h-4 w-4" />,
+              },
+              {
+                label: '更新',
+                onClick: () => onDeploy(device),
+                variant: 'ghost',
+                icon: <Upload className="h-4 w-4" />,
               },
             ] : []}
           />

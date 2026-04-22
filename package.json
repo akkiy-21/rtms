@@ -12,6 +12,7 @@
     "frontend:test": "npm run test --workspace=frontend",
     "backend:start": "cd backend && uv run uvicorn app.main:app --reload",
     "backend:dev": "cd backend && uv run python run.py",
+    "celery:worker": "cd backend && uv run celery -A app.celery_app.celery_app worker --loglevel=info -P solo",
     "mqtt:worker": "cd backend && uv run python -m app.mqtt_worker",
     "client:start": "cd client && npm run start",
     "client:build": "cd client && npm run make",

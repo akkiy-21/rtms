@@ -5,6 +5,7 @@ import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { Toaster } from '@/components/ui/toaster';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import DevicesPage from './pages/DevicesPage';
+import AppReleasesPage from './pages/AppReleasesPage';
 import DeviceCreatePage from './pages/DeviceCreatePage';
 import DeviceEditPage from './pages/DeviceEditPage';
 import DeviceDetailSettingsPage from './pages/DeviceDetailSettingsPage';
@@ -87,6 +88,7 @@ const App: React.FC = () => {
               <Route path="/data-download" element={<DataDownloadPage />} />
               <Route element={<ProtectedRoute allowedRoles={['AD']} />}>
                 <Route path="/devices" element={<DevicesPage />} />
+                <Route path="/app-releases" element={<AppReleasesPage />} />
                 <Route path="/devices/create" element={<DeviceCreatePage />} />
                 <Route path="/devices/:deviceId/edit" element={<DeviceEditPage />} />
                 <Route path="/devices/:deviceId/detail-settings" element={<DeviceDetailSettingsPage />} />

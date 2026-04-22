@@ -35,6 +35,37 @@ class DeviceStatus(enum.Enum):
     DRAFT = "draft"
     ACTIVE = "active"
 
+
+class DeviceActionType(enum.Enum):
+    REBOOT = "reboot"
+    SHUTDOWN = "shutdown"
+    DEPLOY_RTMS_CLIENT = "deploy_rtms_client"
+
+
+class DeviceActionJobStatus(enum.Enum):
+    QUEUED = "queued"
+    RUNNING = "running"
+    SUCCEEDED = "succeeded"
+    FAILED = "failed"
+    PARTIAL = "partial"
+
+
+class DeviceActionJobItemStatus(enum.Enum):
+    QUEUED = "queued"
+    RUNNING = "running"
+    SUCCEEDED = "succeeded"
+    FAILED = "failed"
+    SKIPPED = "skipped"
+
+
+class ManagedAppName(enum.Enum):
+    RTMS_CLIENT = "rtms-client"
+
+
+class AppReleaseStatus(enum.Enum):
+    READY = "ready"
+    ARCHIVED = "archived"
+
 class CodeType(enum.Enum):
     ProductNumber = "ProductNumber"   # 製品品番
 
@@ -53,6 +84,9 @@ class Users(Base):
     password = Column(String(255), nullable=True)
     role = Column(Enum(UserRole), nullable=False)
     first_login_password_change_required = Column(Boolean, nullable=False, default=False, server_default='false')
+
+    uploaded_app_releases = relationship("AppRelease", back_populates="uploader")
+    requested_device_action_jobs = relationship("DeviceActionJob", back_populates="requester")
 
     def __repr__(self):
         return "<User(name='%s', role='%s')>" % (self.name, self.role.name)
@@ -120,6 +154,7 @@ class Devices(Base):
     logging_data_measurements = relationship("LoggingDataMeasurements", back_populates="device", cascade="all, delete-orphan")
     alarm_measurements = relationship("AlarmMeasurements", back_populates="device", cascade="all, delete-orphan")
     efficiency_addresses = relationship("EfficiencyAddresses", back_populates="device", cascade="all, delete-orphan")
+    action_job_items = relationship("DeviceActionJobItem", back_populates="device")
 
     def __repr__(self):
         return f"<Device(id={self.id}, mac_address='{self.mac_address}', name='{self.name}')>"
@@ -138,6 +173,84 @@ class PairingRequests(Base):
 
     def __repr__(self):
         return f"<PairingRequest(id={self.id}, mac_address='{self.mac_address}', pairing_code='{self.pairing_code}', status='{self.status}')>"
+
+
+class AppRelease(Base):
+    __tablename__ = 'app_releases'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    app_name = Column(String(50), nullable=False, default=ManagedAppName.RTMS_CLIENT.value, server_default=ManagedAppName.RTMS_CLIENT.value)
+    version = Column(String(100), nullable=False)
+    platform = Column(String(50), nullable=False, default='linux-arm64', server_default='linux-arm64')
+    filename = Column(String(255), nullable=False)
+    storage_path = Column(String(500), nullable=False)
+    sha256 = Column(String(64), nullable=False)
+    file_size = Column(Integer, nullable=False)
+    status = Column(String(20), nullable=False, default=AppReleaseStatus.READY.value, server_default=AppReleaseStatus.READY.value)
+    notes = Column(Text, nullable=True)
+    uploaded_by = Column(String(10), ForeignKey('users.id'), nullable=True)
+    uploaded_at = Column(DateTime, nullable=False, default=datetime.utcnow, server_default='CURRENT_TIMESTAMP')
+
+    uploader = relationship("Users", back_populates="uploaded_app_releases")
+    device_action_jobs = relationship("DeviceActionJob", back_populates="release")
+
+    __table_args__ = (
+        UniqueConstraint('app_name', 'version', 'platform', name='uq_app_release_name_version_platform'),
+    )
+
+
+class DeviceActionJob(Base):
+    __tablename__ = 'device_action_jobs'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    action_type = Column(String(50), nullable=False)
+    status = Column(String(20), nullable=False, default=DeviceActionJobStatus.QUEUED.value, server_default=DeviceActionJobStatus.QUEUED.value)
+    scope = Column(String(50), nullable=False, default='selection', server_default='selection')
+    requested_by = Column(String(10), ForeignKey('users.id'), nullable=True)
+    release_id = Column(Integer, ForeignKey('app_releases.id'), nullable=True)
+    requested_at = Column(DateTime, nullable=False, default=datetime.utcnow, server_default='CURRENT_TIMESTAMP')
+    started_at = Column(DateTime, nullable=True)
+    finished_at = Column(DateTime, nullable=True)
+    total_items = Column(Integer, nullable=False, default=0, server_default='0')
+    queued_items = Column(Integer, nullable=False, default=0, server_default='0')
+    succeeded_items = Column(Integer, nullable=False, default=0, server_default='0')
+    failed_items = Column(Integer, nullable=False, default=0, server_default='0')
+    skipped_items = Column(Integer, nullable=False, default=0, server_default='0')
+    error_message = Column(Text, nullable=True)
+
+    requester = relationship("Users", back_populates="requested_device_action_jobs")
+    release = relationship("AppRelease", back_populates="device_action_jobs")
+    items = relationship("DeviceActionJobItem", back_populates="job", cascade="all, delete-orphan")
+
+    __table_args__ = (
+        Index('ix_device_action_jobs_status_requested_at', 'status', 'requested_at'),
+    )
+
+
+class DeviceActionJobItem(Base):
+    __tablename__ = 'device_action_job_items'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    job_id = Column(Integer, ForeignKey('device_action_jobs.id', ondelete='CASCADE'), nullable=False)
+    device_id = Column(Integer, ForeignKey('devices.id'), nullable=False)
+    device_name = Column(String(100), nullable=True)
+    mac_address = Column(String(17), nullable=True)
+    last_known_ip_address = Column(String(45), nullable=True)
+    ssh_username = Column(String(100), nullable=True)
+    status = Column(String(20), nullable=False, default=DeviceActionJobItemStatus.QUEUED.value, server_default=DeviceActionJobItemStatus.QUEUED.value)
+    result_message = Column(Text, nullable=True)
+    remote_artifact_path = Column(String(500), nullable=True)
+    started_at = Column(DateTime, nullable=True)
+    finished_at = Column(DateTime, nullable=True)
+    attempt_count = Column(Integer, nullable=False, default=0, server_default='0')
+    metadata_json = Column(JSON, nullable=True)
+
+    job = relationship("DeviceActionJob", back_populates="items")
+    device = relationship("Devices", back_populates="action_job_items")
+
+    __table_args__ = (
+        Index('ix_device_action_job_items_job_status', 'job_id', 'status'),
+    )
 
 class EfficiencyAddresses(Base):
     __tablename__ = 'efficiency_addresses'

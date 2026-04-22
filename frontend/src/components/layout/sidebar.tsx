@@ -11,6 +11,7 @@ import {
   Package,
   Download,
   Bell,
+  Upload,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
@@ -92,6 +93,11 @@ export function Sidebar({ onNavigate }: SidebarProps) {
       label: NAVIGATION_LABELS.USERS,
       href: '/users',
       icon: <Users className="w-4 h-4" />,
+    },
+    {
+      label: NAVIGATION_LABELS.APP_RELEASES,
+      href: '/app-releases',
+      icon: <Upload className="w-4 h-4" />,
     },
     );
   }
