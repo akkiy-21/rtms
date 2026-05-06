@@ -53,6 +53,8 @@ build/Release
 .env.development.local
 .env.production.local
 .env.test
+deploy/.env.prod
+.deploy-tmp/
 
 # --- テストカバレッジ ---
 coverage/
@@ -103,6 +105,7 @@ pids/
 # --- その他 ---
 *.bak
 *.tmp
+rtms-server-deploy*.tar
 jspm_packages/
 lib-cov
 .lock-wscript

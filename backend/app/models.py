@@ -3,7 +3,7 @@
 """
 データベースモデル定義
 """
-from sqlalchemy import Column, Integer, String, Enum, ForeignKey, DateTime, Float, Table, Time, Index, UniqueConstraint, Boolean, ForeignKeyConstraint, LargeBinary, JSON, Text
+from sqlalchemy import Column, Integer, String, Enum, ForeignKey, DateTime, Float, Table, Time, Index, UniqueConstraint, Boolean, ForeignKeyConstraint, LargeBinary, JSON, Text, text
 from sqlalchemy.orm import relationship, validates, backref
 import enum
 from datetime import datetime
@@ -168,8 +168,8 @@ class PairingRequests(Base):
     pairing_code = Column(String(4), nullable=True, index=True)
     status = Column(String(20), nullable=False, default='pending', server_default='pending')
     expires_at = Column(DateTime, nullable=True)
-    created_at = Column(DateTime, nullable=False, default=datetime.utcnow, server_default='CURRENT_TIMESTAMP')
-    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow, server_default='CURRENT_TIMESTAMP')
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow, server_default=text("CURRENT_TIMESTAMP"))
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow, server_default=text("CURRENT_TIMESTAMP"))
 
     def __repr__(self):
         return f"<PairingRequest(id={self.id}, mac_address='{self.mac_address}', pairing_code='{self.pairing_code}', status='{self.status}')>"
@@ -189,7 +189,7 @@ class AppRelease(Base):
     status = Column(String(20), nullable=False, default=AppReleaseStatus.READY.value, server_default=AppReleaseStatus.READY.value)
     notes = Column(Text, nullable=True)
     uploaded_by = Column(String(10), ForeignKey('users.id'), nullable=True)
-    uploaded_at = Column(DateTime, nullable=False, default=datetime.utcnow, server_default='CURRENT_TIMESTAMP')
+    uploaded_at = Column(DateTime, nullable=False, default=datetime.utcnow, server_default=text("CURRENT_TIMESTAMP"))
 
     uploader = relationship("Users", back_populates="uploaded_app_releases")
     device_action_jobs = relationship("DeviceActionJob", back_populates="release")
@@ -208,7 +208,7 @@ class DeviceActionJob(Base):
     scope = Column(String(50), nullable=False, default='selection', server_default='selection')
     requested_by = Column(String(10), ForeignKey('users.id'), nullable=True)
     release_id = Column(Integer, ForeignKey('app_releases.id'), nullable=True)
-    requested_at = Column(DateTime, nullable=False, default=datetime.utcnow, server_default='CURRENT_TIMESTAMP')
+    requested_at = Column(DateTime, nullable=False, default=datetime.utcnow, server_default=text("CURRENT_TIMESTAMP"))
     started_at = Column(DateTime, nullable=True)
     finished_at = Column(DateTime, nullable=True)
     total_items = Column(Integer, nullable=False, default=0, server_default='0')

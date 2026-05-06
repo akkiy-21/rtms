@@ -1,5 +1,6 @@
 # main.py
 
+import os
 from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI
@@ -13,6 +14,17 @@ from app.services import user_service
 
 # MQTT の購読処理は別プロセス (mqtt_worker.py) で管理する。
 # FastAPI 側は更新通知 publish のみを行い、常駐クライアントは持たない。
+
+
+def get_debug_enabled() -> bool:
+    return os.getenv("RTMS_DEBUG", "false").lower() in {"1", "true", "yes", "on"}
+
+
+def get_cors_origins() -> list[str]:
+    raw_origins = os.getenv("RTMS_CORS_ORIGINS", "*").strip()
+    if not raw_origins:
+        return ["*"]
+    return [origin.strip() for origin in raw_origins.split(",") if origin.strip()]
 
 
 def ensure_initial_admin_user_exists() -> None:
@@ -35,7 +47,7 @@ app = FastAPI(
     title="miyazaki-scada-api",
     description="",
     version="0.0.1",
-    debug=True,
+    debug=get_debug_enabled(),
     lifespan=lifespan,
 )
 
@@ -43,7 +55,7 @@ app = FastAPI(
 # ルーターを含める前に追加します
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # 必要に応じて特定のオリジンに制限できます
+    allow_origins=get_cors_origins(),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

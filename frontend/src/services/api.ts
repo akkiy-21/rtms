@@ -235,12 +235,12 @@ export const deletePLC = async (id: number): Promise<void> => {
 
 // TimeTable関連のAPI呼び出し
 export const getTimeTables = async (): Promise<TimeTable[]> => {
-  const response = await axios.get(`${API_BASE_URL}/time_tables`);
+  const response = await axios.get(`${API_BASE_URL}/time_tables/`);
   return response.data;
 };
 
 export const createTimeTable = async (timeTableData: TimeTableRequest): Promise<TimeTable[]> => {
-  const response = await axios.post(`${API_BASE_URL}/time_tables`, timeTableData);
+  const response = await axios.post(`${API_BASE_URL}/time_tables/`, timeTableData);
   return response.data;
 };
 

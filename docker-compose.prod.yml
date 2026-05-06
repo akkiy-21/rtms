@@ -1,0 +1,130 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: rtms-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  mosquitto:
+    image: eclipse-mosquitto:2
+    container_name: rtms-mosquitto
+    ports:
+      - "1883:1883"
+      - "9001:9001"
+    volumes:
+      - ./mosquitto/config:/mosquitto/config:ro
+      - mosquitto_data:/mosquitto/data
+      - mosquitto_log:/mosquitto/log
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: rtms-redis
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: .
+      dockerfile: deploy/docker/backend.Dockerfile
+    container_name: rtms-backend
+    env_file:
+      - ${RTMS_ENV_FILE:-deploy/.env.prod}
+    depends_on:
+      - postgres
+      - mosquitto
+      - redis
+    volumes:
+      - rtms_app_storage:/app/storage
+    restart: unless-stopped
+
+  mqtt-worker:
+    build:
+      context: .
+      dockerfile: deploy/docker/backend.Dockerfile
+    container_name: rtms-mqtt-worker
+    env_file:
+      - ${RTMS_ENV_FILE:-deploy/.env.prod}
+    depends_on:
+      - postgres
+      - mosquitto
+    command: ["python", "-m", "app.mqtt_worker"]
+    volumes:
+      - rtms_app_storage:/app/storage
+    restart: unless-stopped
+
+  celery-worker:
+    build:
+      context: .
+      dockerfile: deploy/docker/backend.Dockerfile
+    container_name: rtms-celery-worker
+    env_file:
+      - ${RTMS_ENV_FILE:-deploy/.env.prod}
+    depends_on:
+      - postgres
+      - redis
+    command: ["celery", "-A", "app.celery_app.celery_app", "worker", "--loglevel=info", "-P", "solo"]
+    volumes:
+      - rtms_app_storage:/app/storage
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: .
+      dockerfile: deploy/docker/frontend.Dockerfile
+      args:
+        REACT_APP_API_URL: /api
+    container_name: rtms-frontend
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
+    restart: unless-stopped
+
+  backend-init:
+    build:
+      context: .
+      dockerfile: deploy/docker/backend.Dockerfile
+    env_file:
+      - ${RTMS_ENV_FILE:-deploy/.env.prod}
+    depends_on:
+      - postgres
+    command: ["python", "-m", "app.init_db"]
+    volumes:
+      - rtms_app_storage:/app/storage
+    profiles: ["tools"]
+    restart: "no"
+
+  backend-migrate:
+    build:
+      context: .
+      dockerfile: deploy/docker/backend.Dockerfile
+    env_file:
+      - ${RTMS_ENV_FILE:-deploy/.env.prod}
+    depends_on:
+      - postgres
+    command: ["alembic", "upgrade", "head"]
+    volumes:
+      - rtms_app_storage:/app/storage
+    profiles: ["tools"]
+    restart: "no"
+
+volumes:
+  postgres_data:
+  mosquitto_data:
+  mosquitto_log:
+  redis_data:
+  rtms_app_storage:
+
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: 172.30.0.0/24

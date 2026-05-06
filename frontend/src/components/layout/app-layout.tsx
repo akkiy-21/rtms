@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { Menu, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Sheet, SheetContent } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { useAuth } from '@/contexts/AuthContext';
 import { Sidebar } from './sidebar';
 import { NAVIGATION_LABELS } from '@/localization/constants/navigation-labels';
@@ -187,6 +187,10 @@ export function AppLayout({ children }: AppLayoutProps) {
       {/* Sidebar */}
       <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
         <SheetContent side="left" className="w-64 p-0">
+          <SheetHeader className="sr-only">
+            <SheetTitle>ナビゲーションメニュー</SheetTitle>
+            <SheetDescription>画面間を移動するためのサイドバーです。</SheetDescription>
+          </SheetHeader>
           <Sidebar onNavigate={() => setSidebarOpen(false)} />
         </SheetContent>
       </Sheet>
