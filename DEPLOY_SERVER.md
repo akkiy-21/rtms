@@ -10,6 +10,8 @@
 - celery-worker: デバイス操作ジョブ
 - postgres / redis / mosquitto: ミドルウェア
 
+管理画面は frontend 経由で 80/tcp から利用しますが、現場の Electron client は backend の 8000/tcp に直接接続します。
+
 frontend は /api を backend へリバースプロキシするため、サーバーの IP が変わってもフロントエンドの再設定を最小化できます。
 
 ## 1. 本番環境ファイルの準備
@@ -41,8 +43,16 @@ RTMS_ENV_FILE=deploy/.env.prod docker compose -f docker-compose.prod.yml --env-f
 
 - 管理画面: http://<server-ip>/
 - API docs: http://<server-ip>/docs
+- Client API: http://<server-ip>:8000/
 - MQTT TCP: <server-ip>:1883
 - MQTT WebSocket: <server-ip>:9001
+
+firewalld を使っている場合は 8000/tcp も許可してください。
+
+```bash
+sudo firewall-cmd --permanent --add-port=8000/tcp
+sudo firewall-cmd --reload
+```
 
 ## 5. 更新
 
