@@ -520,9 +520,9 @@ export const removeProductFromDevice = async (deviceId: number, productId: numbe
   await axios.delete(`${API_BASE_URL}/devices/${deviceId}/products/${productId}`);
 };
 
-export const downloadDeviceData = async (deviceId: number, date: string, encoding: string): Promise<Blob> => {
+export const downloadDeviceData = async (deviceId: number, startDate: string, endDate: string, encoding: string): Promise<Blob> => {
   const response = await axios.get(
-    `${API_BASE_URL}/data/${deviceId}/aggregated_data?date=${date}&encoding=${encoding}`,
+    `${API_BASE_URL}/data/${deviceId}/aggregated_data?start_date=${startDate}&end_date=${endDate}&encoding=${encoding}`,
     { responseType: 'blob' }
   );
   return response.data;

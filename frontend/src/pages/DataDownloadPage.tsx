@@ -26,8 +26,9 @@ const DataDownloadPage: React.FC = () => {
     setDevices(fetchedDevices);
   };
 
-  const handleDownload = async (deviceIds: number[], date: Date, encoding: string) => {
-    const formattedDate = format(date, 'yyyy-MM-dd');
+  const handleDownload = async (deviceIds: number[], startDate: Date, endDate: Date, encoding: string) => {
+    const formattedStartDate = format(startDate, 'yyyy-MM-dd');
+    const formattedEndDate = format(endDate, 'yyyy-MM-dd');
     const results: DownloadResult[] = [];
 
     for (const deviceId of deviceIds) {
@@ -35,12 +36,12 @@ const DataDownloadPage: React.FC = () => {
       if (!device) continue;
 
       try {
-        const blob = await downloadDeviceData(deviceId, formattedDate, encoding);
+        const blob = await downloadDeviceData(deviceId, formattedStartDate, formattedEndDate, encoding);
         
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `${device.name}_${formattedDate}.csv`;
+        a.download = `${device.name}_${formattedStartDate}_${formattedEndDate}.csv`;
         document.body.appendChild(a);
         a.click();
         window.URL.revokeObjectURL(url);

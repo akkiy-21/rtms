@@ -71,7 +71,7 @@ def process_alarm_data(db: Session, device_id: int, data: dict, event_time: int)
                 }
                 data_crud.create_alarm_measurement_comment(db, alarm_comment)
 
-def get_aggregated_data(db: Session, device_id: int, target_date: date):
+def get_aggregated_data(db: Session, device_id: int, start_date: date, end_date: date):
     # タイムゾーンの設定
     tz = pytz.timezone('Asia/Tokyo')
 
@@ -82,30 +82,35 @@ def get_aggregated_data(db: Session, device_id: int, target_date: date):
 
     results = []
 
-    for shift in time_tables:
-        # シフトの開始・終了時間を target_date に適用
-        start_datetime = datetime.combine(target_date, shift.start_time)
-        end_datetime = datetime.combine(target_date, shift.end_time)
+    current_date = start_date
+    while current_date <= end_date:
+        for shift in time_tables:
+            # シフトの開始・終了時間を current_date に適用
+            start_datetime = datetime.combine(current_date, shift.start_time)
+            end_datetime = datetime.combine(current_date, shift.end_time)
 
-        # シフトが日付をまたぐ場合の調整
-        if end_datetime <= start_datetime:
-            end_datetime += timedelta(days=1)
+            # シフトが日付をまたぐ場合の調整
+            if end_datetime <= start_datetime:
+                end_datetime += timedelta(days=1)
 
-        # タイムゾーンを適用
-        start_datetime = tz.localize(start_datetime)
-        end_datetime = tz.localize(end_datetime)
+            # タイムゾーンを適用
+            start_datetime = tz.localize(start_datetime)
+            end_datetime = tz.localize(end_datetime)
 
-        # データを取得
-        good_qty = data_crud.get_quality_counts(db, device_id, 'Good', start_datetime, end_datetime)
-        ng_qty = data_crud.get_quality_counts(db, device_id, 'Ng', start_datetime, end_datetime)
+            # データを取得
+            good_qty = data_crud.get_quality_counts(db, device_id, 'Good', start_datetime, end_datetime)
+            ng_qty = data_crud.get_quality_counts(db, device_id, 'Ng', start_datetime, end_datetime)
 
-        # シフト時間の文字列を作成
-        shift_time_str = f"{shift.start_time.strftime('%H:%M')}-{shift.end_time.strftime('%H:%M')}"
+            # シフト時間の文字列を作成
+            shift_time_str = f"{shift.start_time.strftime('%H:%M')}-{shift.end_time.strftime('%H:%M')}"
 
-        results.append([
-            shift_time_str,
-            int(good_qty),
-            int(ng_qty)
-        ])
+            results.append([
+                current_date.strftime('%Y-%m-%d'),
+                shift_time_str,
+                int(good_qty),
+                int(ng_qty)
+            ])
+
+        current_date += timedelta(days=1)
 
     return results

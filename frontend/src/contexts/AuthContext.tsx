@@ -1,3 +1,4 @@
+import axios from 'axios';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
 import { changePassword as changePasswordRequest, getCurrentUser, login as loginRequest, setAuthToken } from '@/services/api';
@@ -45,8 +46,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const currentUser = await getCurrentUser();
       setUser(currentUser);
       return currentUser;
-    } catch {
-      logout();
+    } catch (err) {
+      if (axios.isAxiosError(err) && err.response?.status === 401) {
+        // トークンが無効または期限切れ — ログアウトしてログイン画面へ
+        logout();
+      }
+      // ネットワークエラー等はセッションを維持する（再試行可能なため）
       return null;
     }
   }, [logout]);
