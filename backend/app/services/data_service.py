@@ -80,28 +80,41 @@ def get_aggregated_data(db: Session, device_id: int, start_date: date, end_date:
     if not time_tables:
         return []
 
+    # 検索範囲全体をカバーする範囲を計算（1クエリで全データ取得）
+    # start_date 当日00:00から end_date の翌々日00:00まで（日付またぎシフトを確実にカバー）
+    range_start = tz.localize(datetime.combine(start_date, datetime.min.time()))
+    range_end = tz.localize(datetime.combine(end_date + timedelta(days=2), datetime.min.time()))
+
+    # 一括クエリ: 対象期間の全レコードを取得
+    rows = data_crud.get_quality_counts_bulk(db, device_id, range_start, range_end)
+
+    # {(quality_type, event_time): sum} のマップに変換
+    # event_time は aware datetime のまま保持
+    records: list[tuple[str, datetime, int]] = rows  # (quality_type, event_time, quality_count)
+
     results = []
 
     current_date = start_date
     while current_date <= end_date:
         for shift in time_tables:
             # シフトの開始・終了時間を current_date に適用
-            start_datetime = datetime.combine(current_date, shift.start_time)
-            end_datetime = datetime.combine(current_date, shift.end_time)
+            start_datetime = tz.localize(datetime.combine(current_date, shift.start_time))
+            end_datetime = tz.localize(datetime.combine(current_date, shift.end_time))
 
             # シフトが日付をまたぐ場合の調整
             if end_datetime <= start_datetime:
                 end_datetime += timedelta(days=1)
 
-            # タイムゾーンを適用
-            start_datetime = tz.localize(start_datetime)
-            end_datetime = tz.localize(end_datetime)
+            # メモリ上で集計
+            good_qty = sum(
+                count for qtype, etime, count in records
+                if qtype == 'Good' and start_datetime <= etime < end_datetime
+            )
+            ng_qty = sum(
+                count for qtype, etime, count in records
+                if qtype == 'Ng' and start_datetime <= etime < end_datetime
+            )
 
-            # データを取得
-            good_qty = data_crud.get_quality_counts(db, device_id, 'Good', start_datetime, end_datetime)
-            ng_qty = data_crud.get_quality_counts(db, device_id, 'Ng', start_datetime, end_datetime)
-
-            # シフト時間の文字列を作成
             shift_time_str = f"{shift.start_time.strftime('%H:%M')}-{shift.end_time.strftime('%H:%M')}"
 
             results.append([

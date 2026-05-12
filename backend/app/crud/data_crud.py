@@ -54,3 +54,17 @@ def get_quality_counts(db: Session, device_id: int, quality_type: str, start_dat
         models.QualityControlMeasurements.event_time >= start_datetime,
         models.QualityControlMeasurements.event_time < end_datetime
     ).scalar() or 0
+
+def get_quality_counts_bulk(db: Session, device_id: int, start_datetime: datetime, end_datetime: datetime):
+    """指定期間の全品質データを一括取得して (quality_type, event_time, quality_count) のリストで返す"""
+    rows = db.query(
+        models.QualityControlMeasurements.quality_type,
+        models.QualityControlMeasurements.event_time,
+        models.QualityControlMeasurements.quality_count,
+    ).filter(
+        models.QualityControlMeasurements.device_id == device_id,
+        models.QualityControlMeasurements.event_time >= start_datetime,
+        models.QualityControlMeasurements.event_time < end_datetime,
+        models.QualityControlMeasurements.quality_type.in_(['Good', 'Ng']),
+    ).all()
+    return [(r.quality_type, r.event_time, r.quality_count) for r in rows]
