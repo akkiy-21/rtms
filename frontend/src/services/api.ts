@@ -30,6 +30,25 @@ import { DeviceProductAssociation } from '../types/deviceProductAssociation';
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000'; 
 const AUTH_TOKEN_STORAGE_KEY = 'rtms.auth.token';
 
+const normalizeArrayResponse = <T>(payload: unknown, resourceName: string): T[] => {
+  if (Array.isArray(payload)) {
+    return payload as T[];
+  }
+
+  if (payload && typeof payload === 'object') {
+    const wrappedPayload = payload as Record<string, unknown>;
+
+    for (const key of ['items', 'results', 'data', 'devices']) {
+      const value = wrappedPayload[key];
+      if (Array.isArray(value)) {
+        return value as T[];
+      }
+    }
+  }
+
+  throw new Error(`${resourceName} response is not an array`);
+};
+
 export const setAuthToken = (token: string | null): void => {
   if (token) {
     axios.defaults.headers.common.Authorization = `Bearer ${token}`;
@@ -57,7 +76,7 @@ export const changePassword = async (payload: ChangePasswordFormData): Promise<U
 // device
 export const getDevices = async (): Promise<Device[]> => {
   const response = await axios.get(`${API_BASE_URL}/devices`);
-  return response.data;
+  return normalizeArrayResponse<Device>(response.data, 'Devices');
 };
 
 export const getDevice = async (id: number): Promise<Device> => {
