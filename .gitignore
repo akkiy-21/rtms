@@ -104,6 +104,10 @@ pids/
 *.tar
 *.tar.gz
 
+# --- デプロイ一時ディレクトリ・機密ファイル ---
+.deploy-tmp/
+deploy/.env.prod
+
 # --- その他 ---
 *.bak
 *.tmp
