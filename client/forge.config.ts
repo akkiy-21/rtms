@@ -17,7 +17,7 @@ const config: ForgeConfig = {
   packagerConfig: {
     asar: true,
     extraResource: [
-      './resources/bridge_x64_win',
+      //'./resources/bridge_x64_win',
       './resources/bridge_aarch64_linux'
     ],
   },
