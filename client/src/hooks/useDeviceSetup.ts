@@ -18,7 +18,7 @@ export type UseDeviceSetupParams = {
   loadSettings: () => Promise<void>;
   setTimeTables: Dispatch<SetStateAction<TimeTable[]>>;
   setCurrentTimeTableId: Dispatch<SetStateAction<number | null>>;
-  getCurrentTimeTableId: (tables: TimeTable[]) => number;
+  getCurrentTimeTableId: (tables: TimeTable[]) => number | null;
   setDeviceId: (id: number | null) => void;
   isConfigConnected: boolean;
   isScriptReady: boolean;

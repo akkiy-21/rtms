@@ -36,6 +36,7 @@ import { useWebSocket } from './hooks/useWebSocket';
 import { useCursorVisibility } from './hooks/useCursorVisibility';
 import { useDeviceSetup } from './hooks/useDeviceSetup';
 import { useDashboardPublisher } from './hooks/useDashboardPublisher';
+import { getCurrentTimeTableId as getCurrentTimeTableIdForNow } from './utils/timeTableUtils';
 
 const AppContent: React.FC = () => {
   useCursorVisibility();
@@ -94,11 +95,6 @@ const AppContent: React.FC = () => {
     '計画停止時間': 0
   });
 
-  const [displayData, setDisplayData] = useState<{
-    dailyProduction: number;
-    dailyEfficiency: number;
-  }>({ dailyProduction: 0, dailyEfficiency: 0 });
-
   useEffect(() => {
     const handleScriptReady = (ready: boolean) => {
       console.log('🔔 script-ready イベント受信:', ready);
@@ -121,33 +117,31 @@ const AppContent: React.FC = () => {
     }
   }, [isScriptReady]);
 
-  const getCurrentTimeTableId = useCallback((tables: TimeTable[]): number => {
-    const now = new Date();
-    const currentTime = now.getHours() * 60 + now.getMinutes();
+  const getCurrentTimeTableId = useCallback((tables: TimeTable[]): number | null => {
+    return getCurrentTimeTableIdForNow(tables);
+  }, []);
 
-    for (let i = 0; i < tables.length; i++) {
-      const table = tables[i];
-      const [startHour, startMinute] = table.start_time.split(':').map(Number);
-      const [endHour, endMinute] = table.end_time.split(':').map(Number);
+  const createEmptyTimeTableData = useCallback((timestamp: number): TimeTableData => ({
+    productionCount: 0,
+    ngCount: 0,
+    operationTime: 0,
+    performanceLossTime: 0,
+    stopLossTime: 0,
+    plannedStopTime: 0,
+    lastUpdateTime: timestamp
+  }), []);
 
-      const startTime = startHour * 60 + startMinute;
-      let endTime = endHour * 60 + endMinute;
-
-      if (endTime <= startTime) {
-        endTime += 24 * 60;
-      }
-
-      if (currentTime >= startTime && currentTime < endTime) {
-        return table.id;
-      }
-
-      if (i === tables.length - 1 && currentTime < startTime) {
-        return table.id;
-      }
+  const resolveActiveTimeTableId = useCallback((): number | null => {
+    if (currentTimeTableId !== null) {
+      return currentTimeTableId;
     }
 
-    return tables[0].id;
-  }, []);
+    if (timeTables.length === 0) {
+      return null;
+    }
+
+    return getCurrentTimeTableId(timeTables);
+  }, [currentTimeTableId, timeTables, getCurrentTimeTableId]);
 
   const {
     isLoading,
@@ -293,21 +287,19 @@ const AppContent: React.FC = () => {
 
   const handleDataUpdate = useCallback((data: any) => {
     if (data.name === 'quality_control' && data.data) {
+      const activeTimeTableId = resolveActiveTimeTableId();
+
+      if (activeTimeTableId === null) {
+        return;
+      }
+
       setTimeTableData(prevData => {
-        const currentTable = prevData[currentTimeTableId || 0] || {
-          productionCount: 0,
-          ngCount: 0,
-          operationTime: 0,
-          performanceLossTime: 0,
-          stopLossTime: 0,
-          plannedStopTime: 0,
-          lastUpdateTime: Date.now()
-        };
+        const currentTable = prevData[activeTimeTableId] || createEmptyTimeTableData(Date.now());
   
         if (data.data.Good) {
           return {
             ...prevData,
-            [currentTimeTableId || 0]: {
+            [activeTimeTableId]: {
               ...currentTable,
               productionCount: currentTable.productionCount + data.data.Good.count
             }
@@ -315,7 +307,7 @@ const AppContent: React.FC = () => {
         } else if (data.data.Ng) {
           return {
             ...prevData,
-            [currentTimeTableId || 0]: {
+            [activeTimeTableId]: {
               ...currentTable,
               ngCount: currentTable.ngCount + data.data.Ng.count
             }
@@ -326,6 +318,7 @@ const AppContent: React.FC = () => {
       });
     } else if (data.name === 'efficiency' && data.data) {
       const currentTime = Date.now();
+      const activeTimeTableId = resolveActiveTimeTableId();
       
       setSignalStates(prevStates => {
         const newSignalStates = { ...prevStates };
@@ -352,51 +345,45 @@ const AppContent: React.FC = () => {
         const elapsedTime = (currentTime - lastUpdateTime.current) / 1000;
   
         // 最小更新間隔を削除し、常に更新を行うようにする
-        setTimeTableData(prevData => {
-          const currentTable = prevData[currentTimeTableId || 0] || {
-            productionCount: 0,
-            ngCount: 0,
-            operationTime: 0,
-            performanceLossTime: 0,
-            stopLossTime: 0,
-            plannedStopTime: 0,
-            lastUpdateTime: lastUpdateTime.current
-          };
+        if (activeTimeTableId !== null) {
+          setTimeTableData(prevData => {
+            const currentTable = prevData[activeTimeTableId] || createEmptyTimeTableData(lastUpdateTime.current);
   
-          const updatedTable = { ...currentTable };
+            const updatedTable = { ...currentTable };
           
-          // 現在のステータスに対して経過時間を加算
-          switch (currentStatus.current) {
-            case '操業時間':
-              updatedTable.operationTime += elapsedTime;
-              break;
-            case '性能ロス時間':
-              updatedTable.performanceLossTime += elapsedTime;
-              break;
-            case '停止ロス時間':
-              updatedTable.stopLossTime += elapsedTime;
-              break;
-            case '計画停止時間':
-              updatedTable.plannedStopTime += elapsedTime;
-              break;
-          }
-  
-          updatedTable.lastUpdateTime = currentTime;
-  
-          console.log('Time update:', {
-            currentStatus: currentStatus.current,
-            newStatus: newStatus.category,
-            elapsedTime,
-            updatedTimes: {
-              operationTime: updatedTable.operationTime,
-              performanceLossTime: updatedTable.performanceLossTime,
-              stopLossTime: updatedTable.stopLossTime,
-              plannedStopTime: updatedTable.plannedStopTime
+            // 現在のステータスに対して経過時間を加算
+            switch (currentStatus.current) {
+              case '操業時間':
+                updatedTable.operationTime += elapsedTime;
+                break;
+              case '性能ロス時間':
+                updatedTable.performanceLossTime += elapsedTime;
+                break;
+              case '停止ロス時間':
+                updatedTable.stopLossTime += elapsedTime;
+                break;
+              case '計画停止時間':
+                updatedTable.plannedStopTime += elapsedTime;
+                break;
             }
-          });
   
-          return { ...prevData, [currentTimeTableId || 0]: updatedTable };
-        });
+            updatedTable.lastUpdateTime = currentTime;
+  
+            console.log('Time update:', {
+              currentStatus: currentStatus.current,
+              newStatus: newStatus.category,
+              elapsedTime,
+              updatedTimes: {
+                operationTime: updatedTable.operationTime,
+                performanceLossTime: updatedTable.performanceLossTime,
+                stopLossTime: updatedTable.stopLossTime,
+                plannedStopTime: updatedTable.plannedStopTime
+              }
+            });
+  
+            return { ...prevData, [activeTimeTableId]: updatedTable };
+          });
+        }
   
         setOperationStatus(newStatus);
         lastUpdateTime.current = currentTime;
@@ -422,7 +409,7 @@ const AppContent: React.FC = () => {
         return newSignalStates;
       });
     }
-  }, [currentTimeTableId]);
+  }, [createEmptyTimeTableData, resolveActiveTimeTableId]);
 
   /*
   useEffect(() => {
@@ -451,6 +438,7 @@ const AppContent: React.FC = () => {
     const updateCumulativeTimes = () => {
       const now = Date.now();
       const timeDiff = (now - lastUpdateTime.current) / 1000;
+      const activeTimeTableId = resolveActiveTimeTableId();
 
       setCumulativeTimes(prevTimes => {
         const newTimes = { ...prevTimes };
@@ -462,40 +450,34 @@ const AppContent: React.FC = () => {
         return newTimes;
       });
 
-      setTimeTableData(prevData => {
-        const currentTable = prevData[currentTimeTableId || 0] || {
-          productionCount: 0,
-          ngCount: 0,
-          operationTime: 0,
-          performanceLossTime: 0,
-          stopLossTime: 0,
-          plannedStopTime: 0,
-          lastUpdateTime: now
-        };
-        const updatedTable = { ...currentTable };
-        if (currentStatus.current) {
-          switch (currentStatus.current) {
-            case '操業時間':
-              updatedTable.operationTime += timeDiff;
-              break;
-            case '性能ロス時間':
-              updatedTable.performanceLossTime += timeDiff;
-              break;
-            case '停止ロス時間':
-              updatedTable.stopLossTime += timeDiff;
-              break;
-            case '計画停止時間':
-              updatedTable.plannedStopTime += timeDiff;
-              break;
-            default:
-              updatedTable.stopLossTime += timeDiff;
+      if (activeTimeTableId !== null) {
+        setTimeTableData(prevData => {
+          const currentTable = prevData[activeTimeTableId] || createEmptyTimeTableData(now);
+          const updatedTable = { ...currentTable };
+          if (currentStatus.current) {
+            switch (currentStatus.current) {
+              case '操業時間':
+                updatedTable.operationTime += timeDiff;
+                break;
+              case '性能ロス時間':
+                updatedTable.performanceLossTime += timeDiff;
+                break;
+              case '停止ロス時間':
+                updatedTable.stopLossTime += timeDiff;
+                break;
+              case '計画停止時間':
+                updatedTable.plannedStopTime += timeDiff;
+                break;
+              default:
+                updatedTable.stopLossTime += timeDiff;
+            }
+          } else {
+            updatedTable.stopLossTime += timeDiff;
           }
-        } else {
-          updatedTable.stopLossTime += timeDiff;
-        }
-        updatedTable.lastUpdateTime = now;
-        return { ...prevData, [currentTimeTableId || 0]: updatedTable };
-      });
+          updatedTable.lastUpdateTime = now;
+          return { ...prevData, [activeTimeTableId]: updatedTable };
+        });
+      }
 
       lastUpdateTime.current = now;
     };
@@ -503,7 +485,7 @@ const AppContent: React.FC = () => {
     const intervalId = setInterval(updateCumulativeTimes, 500); // 0.5秒ごとに累積時間を更新
 
     return () => clearInterval(intervalId);
-  }, [currentTimeTableId, setCumulativeTimes, setTimeTableData]);
+  }, [createEmptyTimeTableData, resolveActiveTimeTableId, setCumulativeTimes, setTimeTableData]);
 
   const resetData = useCallback(() => {
     setTimeTableData({});
@@ -560,15 +542,7 @@ const AppContent: React.FC = () => {
               console.log(`Initializing new time table data for ID: ${newTimeTableId}`);
               return {
                 ...prevData,
-                [newTimeTableId]: {
-                  productionCount: 0,
-                  ngCount: 0,
-                  operationTime: 0,
-                  performanceLossTime: 0,
-                  stopLossTime: 0,
-                  plannedStopTime: 0,
-                  lastUpdateTime: now.getTime()
-                }
+                [newTimeTableId]: createEmptyTimeTableData(now.getTime())
               };
             }
             return prevData;
@@ -600,7 +574,7 @@ const AppContent: React.FC = () => {
     }, 1000);
 
     return () => clearInterval(intervalId);
-  }, [timeTables, currentTimeTableId, getCurrentTimeTableId, lastDataResetDate, resetData, getBaseTimeTableInfo]);
+  }, [timeTables, currentTimeTableId, getCurrentTimeTableId, lastDataResetDate, resetData, getBaseTimeTableInfo, createEmptyTimeTableData]);
   
 useEffect(() => {
   // MQTT更新通知のハンドラー
@@ -666,13 +640,6 @@ useEffect(() => {
   };
 }, [deviceId, serverIP, serverPort, selectedMac, isConfigConnected, mergeDeviceInfoIntoConfig, persistDeviceConfig]);
 
-  useEffect(() => {
-    setDisplayData({
-      dailyProduction: dailyProduction,
-      dailyEfficiency: dailyEfficiency
-    });
-  }, [dailyProduction, dailyEfficiency, lastDataResetDate]);
-
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
@@ -695,21 +662,16 @@ useEffect(() => {
                 deviceConfig={deviceConfig}
                 hourlyProduction={hourlyProduction}
                 hourlyEfficiency={hourlyEfficiency}
-                dailyProduction={displayData.dailyProduction}
-                dailyEfficiency={displayData.dailyEfficiency}
+                dailyProduction={dailyProduction}
+                dailyEfficiency={dailyEfficiency}
                 hourlyAvgCycleTime={hourlyAvgCycleTime}
                 dailyAvgCycleTime={dailyAvgCycleTime}
               />
             </Grid>
             <Grid item xs={9} sx={{ height: '100%' }}>
               <ProductionStats 
-                deviceConfig={deviceConfig}
-                timeTables={timeTables}
-                currentTimeTableId={currentTimeTableId}
-                timeTableData={timeTableData}
                 hourlyProduction={hourlyProduction}
                 hourlyEfficiency={hourlyEfficiency}
-                displayData={displayData}
                 actualDailyProduction={dailyProduction}
                 actualDailyEfficiency={dailyEfficiency}
               />

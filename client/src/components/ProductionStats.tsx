@@ -2,31 +2,17 @@
 import React from 'react';
 import { Grid, Typography, Paper, Box } from '@mui/material';
 import { getOperationRateColor } from '../utils/colorUtils';
-import { DeviceConfig, TimeTable, TimeTableData } from '../types';
 
 interface ProductionStatsProps {
-  deviceConfig: DeviceConfig | null;
-  timeTables: TimeTable[];
-  currentTimeTableId: number | null;
-  timeTableData: { [key: number]: TimeTableData };
   hourlyProduction: number;
   hourlyEfficiency: number;
-  displayData: {
-    dailyProduction: number;
-    dailyEfficiency: number;
-  };
   actualDailyProduction: number;
   actualDailyEfficiency: number;
 }
 
 const ProductionStats: React.FC<ProductionStatsProps> = ({
-  deviceConfig,
-  timeTables,
-  currentTimeTableId,
-  timeTableData,
   hourlyProduction,
   hourlyEfficiency,
-  displayData,
   actualDailyProduction,
   actualDailyEfficiency
 }) => {
@@ -34,8 +20,8 @@ const ProductionStats: React.FC<ProductionStatsProps> = ({
     { title: '時間当たり', production: hourlyProduction, operationRate: isNaN(hourlyEfficiency) ? 0 : hourlyEfficiency },
     { 
       title: '日当たり', 
-      production: displayData.dailyProduction || actualDailyProduction, 
-      operationRate: isNaN(displayData.dailyEfficiency) ? actualDailyEfficiency : displayData.dailyEfficiency 
+      production: actualDailyProduction,
+      operationRate: isNaN(actualDailyEfficiency) ? 0 : actualDailyEfficiency
     }
   ];
 

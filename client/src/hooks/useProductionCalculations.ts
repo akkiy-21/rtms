@@ -1,6 +1,7 @@
 // src/hooks/useProductionCalculations.ts
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { TimeTable, TimeTableData, DeviceConfig } from '../types';
+import { getBaseTimeInMinutes, getBusinessDayRange, getNormalizedTimeTableWindow, getSortedTimeTables } from '../utils/timeTableUtils';
 
 export type ProductionStats = {
   production: number;
@@ -82,30 +83,9 @@ export const useProductionCalculations = (
 
   const getDailyTimeRange = useCallback(() => {
     const now = new Date();
-    const startTime = new Date(now);
-    
-    // タイムテーブルの最初のエントリ（通常はIDの最小値）の開始時間を取得
-    let baseHour = 8;
-    let baseMinute = 30;
-    
-    if (timeTables.length > 0) {
-      // 最もIDの小さいタイムテーブルを基準とする
-      const firstTable = [...timeTables].sort((a, b) => a.id - b.id)[0];
-      const [startHour, startMinute] = firstTable.start_time.split(':').map(Number);
-      baseHour = startHour;
-      baseMinute = startMinute;
-    }
-    
-    // 基準時間を設定
-    startTime.setHours(baseHour, baseMinute, 0, 0);
-    
-    // 現在時刻が基準時間より前の場合は前日の基準時間を使用
-    if (now.getHours() < baseHour || (now.getHours() === baseHour && now.getMinutes() < baseMinute)) {
-      startTime.setDate(startTime.getDate() - 1);
-    }
-    
-    const endTime = new Date(startTime);
-    endTime.setDate(endTime.getDate() + 1);
+    const { startTime, endTime, baseTime } = getBusinessDayRange(timeTables, now);
+    const baseHour = Math.floor(baseTime / 60);
+    const baseMinute = baseTime % 60;
     
     console.log('Daily time range:', {
       start: startTime.toLocaleString(),
@@ -118,7 +98,8 @@ export const useProductionCalculations = (
   }, [timeTables]);
 
   const calculations = useMemo(() => {
-    if (timeTables.length > 0 && currentTimeTableId && timeTableData[currentTimeTableId] && deviceConfig) {
+    if (timeTables.length > 0 && currentTimeTableId !== null && timeTableData[currentTimeTableId] && deviceConfig) {
+      const sortedTables = getSortedTimeTables(timeTables);
       const currentData = timeTableData[currentTimeTableId];
 
       // 時間当たりの計算
@@ -140,7 +121,7 @@ export const useProductionCalculations = (
       const hourlyNgCount = currentData.ngCount || 0;
 
       // 日当たりの計算
-      const { startTime, endTime } = getDailyTimeRange();
+      getDailyTimeRange();
       const dailyStats: ProductionStats & { ngCount: number } = {
         production: 0,
         operationTime: 0,
@@ -151,34 +132,15 @@ export const useProductionCalculations = (
       };
 
       const includedTableIds: number[] = [];
+      const baseTime = getBaseTimeInMinutes(sortedTables);
+      const normalizedDayStart = baseTime;
+      const normalizedDayEnd = baseTime + (24 * 60);
 
-      timeTables.forEach(table => {
+      sortedTables.forEach(table => {
         const tableData = timeTableData[table.id];
         if (tableData) {
-          // 開始時間の処理
-          const tableStartTime = new Date(startTime);
-          const [startHour, startMinute] = table.start_time.split(':').map(Number);
-          tableStartTime.setHours(startHour, startMinute, 0, 0);
-          
-          // 終了時間の処理
-          const tableEndTime = new Date(tableStartTime);
-          const [endHour, endMinute] = table.end_time.split(':').map(Number);
-          tableEndTime.setHours(endHour, endMinute, 0, 0);
-          
-          // 日付跨ぎの場合は調整
-          if (endHour < startHour || (endHour === startHour && endMinute < startMinute)) {
-            tableEndTime.setDate(tableEndTime.getDate() + 1);
-          }
-          
-          // 集計期間内のタイムテーブルか判定（より包括的な条件）
-          const isOverlapping = (
-            // タイムテーブルが集計期間内に開始
-            (tableStartTime >= startTime && tableStartTime < endTime) ||
-            // タイムテーブルが集計期間内に終了
-            (tableEndTime > startTime && tableEndTime <= endTime) ||
-            // タイムテーブルが集計期間を包含
-            (tableStartTime <= startTime && tableEndTime >= endTime)
-          );
+          const { startTime: normalizedStartTime } = getNormalizedTimeTableWindow(table, baseTime);
+          const isOverlapping = normalizedStartTime >= normalizedDayStart && normalizedStartTime < normalizedDayEnd;
           
           if (isOverlapping) {
             includedTableIds.push(table.id);
