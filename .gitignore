@@ -53,8 +53,6 @@ build/Release
 .env.development.local
 .env.production.local
 .env.test
-deploy/.env.prod
-.deploy-tmp/
 
 # --- テストカバレッジ ---
 coverage/
@@ -102,10 +100,13 @@ pids/
 /client/resources/bridge_x64_win/**
 !/client/resources/bridge_x64_win/.gitkeep
 
+# --- Docker イメージ ---
+*.tar
+*.tar.gz
+
 # --- その他 ---
 *.bak
 *.tmp
-rtms-server-deploy*.tar
 jspm_packages/
 lib-cov
 .lock-wscript
