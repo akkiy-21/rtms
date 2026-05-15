@@ -19,11 +19,12 @@ import { TECHNICAL_TERMS } from '../localization/constants/technical-terms';
 
 interface DataDownloadFormProps {
   devices: Device[];
-  onDownload: (deviceIds: number[], startDate: Date, endDate: Date, encoding: string) => void;
+  onDownload: (deviceIds: number[], startDate: Date, endDate: Date, intervalMinutes: number, encoding: string) => void;
 }
 
 const DataDownloadForm: React.FC<DataDownloadFormProps> = ({ devices, onDownload }) => {
   const [selectedRange, setSelectedRange] = useState<DateRange | undefined>(undefined);
+  const [intervalMinutes, setIntervalMinutes] = useState(60);
   const [encoding, setEncoding] = useState('UTF-8');
   const [checkedDevices, setCheckedDevices] = useState<DeviceCheckboxState>({});
 
@@ -45,7 +46,7 @@ const DataDownloadForm: React.FC<DataDownloadFormProps> = ({ devices, onDownload
       .map(([deviceId]) => parseInt(deviceId));
 
     if (selectedDevices.length === 0) return;
-    onDownload(selectedDevices, selectedRange.from, selectedRange.to, encoding);
+    onDownload(selectedDevices, selectedRange.from, selectedRange.to, intervalMinutes, encoding);
   };
 
   const handleSelectAll = () => {
@@ -105,6 +106,20 @@ const DataDownloadForm: React.FC<DataDownloadFormProps> = ({ devices, onDownload
               />
             </PopoverContent>
           </Popover>
+        </div>
+
+        {/* 集計単位選択 */}
+        <div className="space-y-2">
+          <Label>{SETTINGS_LABELS.INTERVAL}</Label>
+          <Select value={String(intervalMinutes)} onValueChange={(v) => setIntervalMinutes(Number(v))}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="60">{SETTINGS_LABELS.INTERVAL_60MIN}</SelectItem>
+              <SelectItem value="30">{SETTINGS_LABELS.INTERVAL_30MIN}</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         {/* エンコード形式選択 */}

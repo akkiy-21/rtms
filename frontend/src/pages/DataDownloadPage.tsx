@@ -26,7 +26,7 @@ const DataDownloadPage: React.FC = () => {
     setDevices(fetchedDevices);
   };
 
-  const handleDownload = async (deviceIds: number[], startDate: Date, endDate: Date, encoding: string) => {
+  const handleDownload = async (deviceIds: number[], startDate: Date, endDate: Date, intervalMinutes: number, encoding: string) => {
     const formattedStartDate = format(startDate, 'yyyy-MM-dd');
     const formattedEndDate = format(endDate, 'yyyy-MM-dd');
     const results: DownloadResult[] = [];
@@ -36,7 +36,7 @@ const DataDownloadPage: React.FC = () => {
       if (!device) continue;
 
       try {
-        const blob = await downloadDeviceData(deviceId, formattedStartDate, formattedEndDate, encoding);
+        const blob = await downloadDeviceData(deviceId, formattedStartDate, formattedEndDate, intervalMinutes, encoding);
         
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');

@@ -22,6 +22,7 @@ def get_aggregated_data(
     device_id: int,
     start_date_str: str = Query(..., alias="start_date"),
     end_date_str: str = Query(..., alias="end_date"),
+    interval_minutes: int = Query(60),
     encoding: str = Query('UTF-8'),
     db: Session = Depends(get_db)
 ):
@@ -34,7 +35,10 @@ def get_aggregated_data(
     if end_date < start_date:
         raise HTTPException(status_code=400, detail="end_date must be on or after start_date.")
 
-    csv_data = data_service.get_aggregated_data(db, device_id, start_date, end_date)
+    if interval_minutes not in (30, 60):
+        raise HTTPException(status_code=400, detail="interval_minutes must be 30 or 60.")
+
+    csv_data = data_service.get_aggregated_data(db, device_id, start_date, end_date, interval_minutes)
     if not csv_data:
         raise HTTPException(status_code=404, detail="No data found for the specified device and date range.")
 
@@ -61,7 +65,7 @@ def get_aggregated_data(
     # CSVをメモリ上に作成
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow(['date', 'time_shift', 'good_qty', 'ng_qty'])
+    writer.writerow(['started_at', 'ended_at', 'good_qty', 'ng_qty'])
     for row in csv_data:
         writer.writerow(row)
 

@@ -71,59 +71,40 @@ def process_alarm_data(db: Session, device_id: int, data: dict, event_time: int)
                 }
                 data_crud.create_alarm_measurement_comment(db, alarm_comment)
 
-def get_aggregated_data(db: Session, device_id: int, start_date: date, end_date: date):
+def get_aggregated_data(db: Session, device_id: int, start_date: date, end_date: date, interval_minutes: int = 60):
     # タイムゾーンの設定
     tz = pytz.timezone('Asia/Tokyo')
 
-    # タイムテーブルを取得
-    time_tables = time_table_crud.get_time_tables(db)
-    if not time_tables:
-        return []
-
-    # 検索範囲全体をカバーする範囲を計算（1クエリで全データ取得）
-    # start_date 当日00:00から end_date の翌々日00:00まで（日付またぎシフトを確実にカバー）
+    # 集計範囲: start_date 00:00 〜 end_date 翌日 00:00
     range_start = tz.localize(datetime.combine(start_date, datetime.min.time()))
-    range_end = tz.localize(datetime.combine(end_date + timedelta(days=2), datetime.min.time()))
+    range_end = tz.localize(datetime.combine(end_date + timedelta(days=1), datetime.min.time()))
 
     # 一括クエリ: 対象期間の全レコードを取得
-    rows = data_crud.get_quality_counts_bulk(db, device_id, range_start, range_end)
-
-    # {(quality_type, event_time): sum} のマップに変換
-    # event_time は aware datetime のまま保持
-    records: list[tuple[str, datetime, int]] = rows  # (quality_type, event_time, quality_count)
+    records = data_crud.get_quality_counts_bulk(db, device_id, range_start, range_end)
 
     results = []
+    slot_start = range_start
+    delta = timedelta(minutes=interval_minutes)
 
-    current_date = start_date
-    while current_date <= end_date:
-        for shift in time_tables:
-            # シフトの開始・終了時間を current_date に適用
-            start_datetime = tz.localize(datetime.combine(current_date, shift.start_time))
-            end_datetime = tz.localize(datetime.combine(current_date, shift.end_time))
+    while slot_start < range_end:
+        slot_end = slot_start + delta
 
-            # シフトが日付をまたぐ場合の調整
-            if end_datetime <= start_datetime:
-                end_datetime += timedelta(days=1)
+        good_qty = sum(
+            count for qtype, etime, count in records
+            if qtype == 'Good' and slot_start <= etime < slot_end
+        )
+        ng_qty = sum(
+            count for qtype, etime, count in records
+            if qtype == 'Ng' and slot_start <= etime < slot_end
+        )
 
-            # メモリ上で集計
-            good_qty = sum(
-                count for qtype, etime, count in records
-                if qtype == 'Good' and start_datetime <= etime < end_datetime
-            )
-            ng_qty = sum(
-                count for qtype, etime, count in records
-                if qtype == 'Ng' and start_datetime <= etime < end_datetime
-            )
+        results.append([
+            slot_start.strftime('%Y-%m-%d %H:%M:%S'),
+            slot_end.strftime('%Y-%m-%d %H:%M:%S'),
+            int(good_qty),
+            int(ng_qty)
+        ])
 
-            shift_time_str = f"{shift.start_time.strftime('%H:%M')}-{shift.end_time.strftime('%H:%M')}"
-
-            results.append([
-                current_date.strftime('%Y-%m-%d'),
-                shift_time_str,
-                int(good_qty),
-                int(ng_qty)
-            ])
-
-        current_date += timedelta(days=1)
+        slot_start = slot_end
 
     return results
