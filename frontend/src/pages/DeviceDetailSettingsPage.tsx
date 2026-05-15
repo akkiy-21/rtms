@@ -18,7 +18,8 @@ import {
   TrendingUp, 
   Plug, 
   Package, 
-  CheckCircle 
+  CheckCircle,
+  Cable
 } from 'lucide-react';
 
 const DeviceDetailSettingsPage: React.FC = () => {
@@ -101,6 +102,13 @@ const DeviceDetailSettingsPage: React.FC = () => {
       icon: Plug,
       path: `/devices/${deviceId}/detail-settings/io-settings`,
       color: 'text-orange-500',
+    },
+    {
+      title: NAVIGATION_LABELS.EXTERNAL_CONNECTORS,
+      description: '外部システムへデータを定期送信',
+      icon: Cable,
+      path: `/devices/${deviceId}/detail-settings/external-connectors`,
+      color: 'text-cyan-500',
     },
     {
       title: `${BUSINESS_TERMS.PRODUCT}設定`,

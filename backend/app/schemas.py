@@ -976,3 +976,41 @@ class AlarmMeasurementResponse(BaseModel):
 
 # 循環参照を解決するために、更新
 QualityControlSignal.model_rebuild()
+
+
+# DeviceConnector (外部連携設定)
+
+class DeviceConnectorBase(BaseModel):
+    name: str = Field(..., max_length=100)
+    connector_type: str = Field(default='aggregated_data', max_length=50)
+    url: str = Field(..., max_length=500)
+    api_key_header: str = Field(default='X-Api-Key', max_length=100)
+    api_key_value: str = Field(..., max_length=255)
+    send_interval_minutes: int = Field(default=60, ge=30)
+    initial_sync_days: int = Field(default=7, ge=1)
+    is_enabled: bool = True
+
+
+class DeviceConnectorCreate(DeviceConnectorBase):
+    pass
+
+
+class DeviceConnectorUpdate(BaseModel):
+    name: Optional[str] = Field(None, max_length=100)
+    connector_type: Optional[str] = Field(None, max_length=50)
+    url: Optional[str] = Field(None, max_length=500)
+    api_key_header: Optional[str] = Field(None, max_length=100)
+    api_key_value: Optional[str] = Field(None, max_length=255)
+    send_interval_minutes: Optional[int] = Field(None, ge=30)
+    initial_sync_days: Optional[int] = Field(None, ge=1)
+    is_enabled: Optional[bool] = None
+
+
+class DeviceConnectorResponse(DeviceConnectorBase):
+    id: int
+    device_id: int
+    last_sent_at: Optional[datetime] = None
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)

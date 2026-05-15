@@ -13,6 +13,7 @@ import AlarmGroupsPage from './pages/AlarmGroupsPage';
 import LoggingSettingsPage from './pages/LoggingSettingsPage';
 import EfficiencySettingsPage from './pages/EfficiencySettingsPage';
 import IOSettingsPage from './pages/IOSettingsPage';
+import ExternalConnectorsPage from './pages/ExternalConnectorsPage';
 import ClassificationsPage from './pages/ClassificationsPage';
 import ClassificationEditPage from './pages/ClassificationEditPage';
 import ClassificationCreatePage from './pages/ClassificationCreatePage';
@@ -94,6 +95,7 @@ const App: React.FC = () => {
                 <Route path="/devices/:deviceId/detail-settings" element={<DeviceDetailSettingsPage />} />
                 <Route path="/devices/:deviceId/detail-settings/efficiency-settings" element={<EfficiencySettingsPage />} />
                 <Route path="/devices/:deviceId/detail-settings/io-settings" element={<IOSettingsPage />} />
+                <Route path="/devices/:deviceId/detail-settings/external-connectors" element={<ExternalConnectorsPage />} />
                 <Route path="/devices/:deviceId/detail-settings/quality-control-signals" element={<QualityControlSignalsPage />} />
                 <Route path="/devices/:deviceId/detail-settings/client-settings" element={<ClientSettingsPage />} />
                 <Route path="/devices/:deviceId/detail-settings/client-settings/create" element={<ClientCreatePage />} />

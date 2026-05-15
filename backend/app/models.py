@@ -143,6 +143,7 @@ class Devices(Base):
     alarm_groups = relationship("AlarmGroups", back_populates="device", cascade="all, delete-orphan")
     logging_settings = relationship("LoggingSettings", back_populates="device", cascade="all, delete-orphan")
     io_settings = relationship("DeviceClientIO", back_populates="device", cascade="all, delete-orphan")
+    connectors = relationship("DeviceConnector", back_populates="device", cascade="all, delete-orphan")
     products = relationship("DeviceProductAssociation", back_populates="device", cascade="all, delete-orphan")
     quality_control_signals = relationship("QualityControlSignal", back_populates="device", cascade="all, delete-orphan")
     printer_settings = relationship("PrinterSettings", back_populates="device", cascade="all, delete-orphan")
@@ -316,6 +317,31 @@ class DeviceClientIO(Base):
 
     device = relationship("Devices", back_populates="io_settings")
     client = relationship("Clients")
+
+
+class DeviceConnector(Base):
+    """外部連携設定: デバイスのデータを定期的に外部APIへ送信するコネクタ設定"""
+    __tablename__ = 'device_connectors'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    device_id = Column(Integer, ForeignKey('devices.id'), nullable=False)
+    name = Column(String(100), nullable=False)
+    connector_type = Column(String(50), nullable=False, default='aggregated_data')
+    url = Column(String(500), nullable=False)
+    api_key_header = Column(String(100), nullable=False, default='X-Api-Key')
+    api_key_value = Column(String(255), nullable=False)
+    send_interval_minutes = Column(Integer, nullable=False, default=60)
+    initial_sync_days = Column(Integer, nullable=False, default=7)
+    is_enabled = Column(Boolean, nullable=False, default=True)
+    last_sent_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    device = relationship("Devices", back_populates="connectors")
+
+    def __repr__(self):
+        return f"<DeviceConnector(id={self.id}, device_id={self.device_id}, name='{self.name}', type='{self.connector_type}')>"
+
 
 class AlarmParseRule(Base):
     __tablename__ = 'alarm_parse_rules'

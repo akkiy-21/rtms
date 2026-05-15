@@ -7,7 +7,7 @@ from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import inspect
 
-from app.api.endpoints import alarm_parse_rules, auth, devices, classifications, pairings, plcs, time_tables, customers, products, users, data, dashboard
+from app.api.endpoints import alarm_parse_rules, auth, devices, classifications, pairings, plcs, time_tables, customers, products, users, data, dashboard, device_connectors
 from app.auth import require_admin_user, require_authenticated_user
 from app.database import SessionLocal, engine
 from app.services import user_service
@@ -74,6 +74,7 @@ app.include_router(products.router, dependencies=[Depends(require_admin_user)])
 app.include_router(users.router, dependencies=[Depends(require_admin_user)])
 app.include_router(data.router, dependencies=[Depends(require_authenticated_user)])
 app.include_router(dashboard.router)
+app.include_router(device_connectors.router, dependencies=[Depends(require_admin_user)])
 
 @app.get("/")
 async def root():
