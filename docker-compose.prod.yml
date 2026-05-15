@@ -77,6 +77,21 @@ services:
       - rtms_app_storage:/app/storage
     restart: unless-stopped
 
+  celery-beat:
+    build:
+      context: .
+      dockerfile: deploy/docker/backend.Dockerfile
+    container_name: rtms-celery-beat
+    env_file:
+      - ${RTMS_ENV_FILE:-deploy/.env.prod}
+    depends_on:
+      - postgres
+      - redis
+    command: ["celery", "-A", "app.celery_app.celery_app", "beat", "--loglevel=info"]
+    volumes:
+      - rtms_app_storage:/app/storage
+    restart: unless-stopped
+
   frontend:
     build:
       context: .
