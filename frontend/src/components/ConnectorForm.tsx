@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
@@ -13,6 +14,11 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
+import {
   Form,
   FormControl,
   FormField,
@@ -21,6 +27,75 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { SETTINGS_LABELS } from '../localization/constants/settings-labels';
+
+const CONNECTOR_SCHEMAS: Record<string, { description: string; example: object; fields: { name: string; type: string; description: string }[] }> = {
+  aggregated_data: {
+    description: '集計期間ごとの良品数・不良品数を配列で送信します。',
+    example: {
+      records: [
+        {
+          started_at: '2026-05-18T08:00:00',
+          ended_at: '2026-05-18T09:00:00',
+          good_qty: 120,
+          ng_qty: 3,
+        },
+      ],
+      on_duplicate: 'append',
+    },
+    fields: [
+      { name: 'records[].started_at', type: 'string', description: '集計期間の開始日時（ISO 8601）' },
+      { name: 'records[].ended_at', type: 'string', description: '集計期間の終了日時（ISO 8601）' },
+      { name: 'records[].good_qty', type: 'integer', description: '良品数' },
+      { name: 'records[].ng_qty', type: 'integer', description: '不良品数' },
+      { name: 'on_duplicate', type: 'string', description: '重複時の動作（固定値: "append"）' },
+    ],
+  },
+  alarm_data: {
+    description: 'アラームデータ（未実装）',
+    example: {},
+    fields: [],
+  },
+};
+
+const ConnectorTypeSchemaHelp: React.FC<{ connectorType: string }> = ({ connectorType }) => {
+  const [open, setOpen] = useState(false);
+  const schema = CONNECTOR_SCHEMAS[connectorType];
+  if (!schema || schema.fields.length === 0) return null;
+  return (
+    <Collapsible open={open} onOpenChange={setOpen}>
+      <CollapsibleTrigger className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors">
+        <ChevronDown
+          className={`h-3 w-3 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
+        />
+        送信JSONスキーマを確認
+      </CollapsibleTrigger>
+      <CollapsibleContent className="mt-2 space-y-2">
+        <p className="text-xs text-muted-foreground">{schema.description}</p>
+        <pre className="rounded-md bg-muted p-3 text-xs overflow-x-auto">
+          {JSON.stringify(schema.example, null, 2)}
+        </pre>
+        <table className="w-full text-xs border-collapse">
+          <thead>
+            <tr className="border-b">
+              <th className="text-left py-1 pr-3 font-medium text-muted-foreground">フィールド</th>
+              <th className="text-left py-1 pr-3 font-medium text-muted-foreground">型</th>
+              <th className="text-left py-1 font-medium text-muted-foreground">説明</th>
+            </tr>
+          </thead>
+          <tbody>
+            {schema.fields.map((f) => (
+              <tr key={f.name} className="border-b border-muted">
+                <td className="py-1 pr-3 font-mono text-foreground">{f.name}</td>
+                <td className="py-1 pr-3 text-muted-foreground">{f.type}</td>
+                <td className="py-1 text-muted-foreground">{f.description}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </CollapsibleContent>
+    </Collapsible>
+  );
+};
 import { VALIDATION_MESSAGES } from '../localization/constants/validation-messages';
 import { DeviceConnector, DeviceConnectorCreate, DeviceConnectorUpdate } from '../types/connector';
 
@@ -111,6 +186,8 @@ const ConnectorForm: React.FC<ConnectorFormProps> = ({ initialValues, onSubmit, 
             </FormItem>
           )}
         />
+
+        <ConnectorTypeSchemaHelp connectorType={form.watch('connector_type')} />
 
         <FormField
           control={form.control}
