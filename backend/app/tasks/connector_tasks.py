@@ -31,6 +31,7 @@ def _build_request_body(connector_type: str, records: list) -> dict:
                 }
                 for row in records
             ],
+            "on_duplicate": "append",
         }
     raise ValueError(f"Unknown connector_type: {connector_type}")
 
