@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { DeviceConnector, DeviceConnectorCreate, DeviceConnectorUpdate } from '../types/connector';
+import { ConnectorLog, DeviceConnector, DeviceConnectorCreate, DeviceConnectorUpdate } from '../types/connector';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 
@@ -34,4 +34,16 @@ export const deleteConnector = async (deviceId: number, connectorId: number): Pr
 
 export const triggerConnector = async (deviceId: number, connectorId: number): Promise<void> => {
   await axios.post(`${API_BASE_URL}/devices/${deviceId}/connectors/${connectorId}/trigger`);
+};
+
+export const getConnectorLogs = async (
+  deviceId: number,
+  connectorId: number,
+  limit = 50
+): Promise<ConnectorLog[]> => {
+  const response = await axios.get(
+    `${API_BASE_URL}/devices/${deviceId}/connectors/${connectorId}/logs`,
+    { params: { limit } }
+  );
+  return response.data;
 };

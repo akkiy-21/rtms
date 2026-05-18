@@ -82,6 +82,9 @@ def send_connector_data(self, connector_id: int, manual: bool = False):
                 end_date,
             )
             connector_crud.update_last_sent_at(db, connector_id, now_utc)
+            connector_crud.create_connector_log(
+                db, connector_id, now_utc, manual, status="no_data", records_count=0
+            )
             return
 
         body = _build_request_body(connector.connector_type, connector.on_duplicate, records)
@@ -98,6 +101,12 @@ def send_connector_data(self, connector_id: int, manual: bool = False):
             response.raise_for_status()
 
         connector_crud.update_last_sent_at(db, connector_id, now_utc)
+        connector_crud.create_connector_log(
+            db, connector_id, now_utc, manual,
+            status="success",
+            status_code=response.status_code,
+            records_count=len(records),
+        )
         logger.info(
             "send_connector_data: connector %s sent %d records (status %s).",
             connector_id,
@@ -116,6 +125,12 @@ def send_connector_data(self, connector_id: int, manual: bool = False):
             raise self.retry(exc=exc)
         except MaxRetriesExceededError:
             connector_crud.update_last_sent_at(db, connector_id, now_utc)
+            connector_crud.create_connector_log(
+                db, connector_id, now_utc, manual,
+                status="failed",
+                status_code=exc.response.status_code,
+                error_message=exc.response.text[:500],
+            )
             raise
     except httpx.RequestError as exc:
         logger.error("send_connector_data: request error for connector %s: %s", connector_id, exc)
@@ -123,6 +138,11 @@ def send_connector_data(self, connector_id: int, manual: bool = False):
             raise self.retry(exc=exc)
         except MaxRetriesExceededError:
             connector_crud.update_last_sent_at(db, connector_id, now_utc)
+            connector_crud.create_connector_log(
+                db, connector_id, now_utc, manual,
+                status="failed",
+                error_message=str(exc)[:500],
+            )
             raise
     except Exception as exc:
         logger.exception("send_connector_data: unexpected error for connector %s", connector_id)

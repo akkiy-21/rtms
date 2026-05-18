@@ -339,9 +339,27 @@ class DeviceConnector(Base):
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     device = relationship("Devices", back_populates="connectors")
+    logs = relationship("DeviceConnectorLog", back_populates="connector", cascade="all, delete-orphan",
+                        order_by="DeviceConnectorLog.triggered_at.desc()")
 
     def __repr__(self):
         return f"<DeviceConnector(id={self.id}, device_id={self.device_id}, name='{self.name}', type='{self.connector_type}')>"
+
+
+class DeviceConnectorLog(Base):
+    """コネクタ送信履歴"""
+    __tablename__ = 'device_connector_logs'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    connector_id = Column(Integer, ForeignKey('device_connectors.id', ondelete='CASCADE'), nullable=False)
+    triggered_at = Column(DateTime, nullable=False)
+    is_manual = Column(Boolean, nullable=False, default=False)
+    status = Column(String(20), nullable=False)  # 'success', 'failed', 'no_data'
+    status_code = Column(Integer, nullable=True)
+    records_count = Column(Integer, nullable=True)
+    error_message = Column(Text, nullable=True)
+
+    connector = relationship("DeviceConnector", back_populates="logs")
 
 
 class AlarmParseRule(Base):

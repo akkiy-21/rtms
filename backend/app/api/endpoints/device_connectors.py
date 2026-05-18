@@ -7,7 +7,12 @@ from sqlalchemy.orm import Session
 from ...auth import require_admin_user
 from ...crud import device_connectors as connector_crud
 from ...database import get_db
-from ...schemas import DeviceConnectorCreate, DeviceConnectorResponse, DeviceConnectorUpdate
+from ...schemas import (
+    ConnectorLogResponse,
+    DeviceConnectorCreate,
+    DeviceConnectorResponse,
+    DeviceConnectorUpdate,
+)
 from ...tasks.connector_tasks import send_connector_data
 
 router = APIRouter(
@@ -84,3 +89,19 @@ def trigger_connector(device_id: int, connector_id: int, db: Session = Depends(g
     _get_connector_or_404(db, device_id, connector_id)
     send_connector_data.delay(connector_id, manual=True)
     return {"detail": "Connector task queued."}
+
+
+@router.get(
+    "/{device_id}/connectors/{connector_id}/logs",
+    response_model=List[ConnectorLogResponse],
+    dependencies=[Depends(require_admin_user)],
+)
+def get_connector_logs(
+    device_id: int,
+    connector_id: int,
+    limit: int = 50,
+    db: Session = Depends(get_db),
+):
+    """コネクタの送信履歴を取得する（最新50件）。"""
+    _get_connector_or_404(db, device_id, connector_id)
+    return connector_crud.get_connector_logs(db, connector_id, limit=limit)

@@ -1016,3 +1016,16 @@ class DeviceConnectorResponse(DeviceConnectorBase):
     updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class ConnectorLogResponse(BaseModel):
+    id: int
+    connector_id: int
+    triggered_at: datetime
+    is_manual: bool
+    status: str
+    status_code: Optional[int] = None
+    records_count: Optional[int] = None
+    error_message: Optional[str] = None
+
+    model_config = ConfigDict(from_attributes=True)

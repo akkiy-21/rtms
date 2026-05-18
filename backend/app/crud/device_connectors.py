@@ -4,7 +4,7 @@ from typing import List, Optional
 
 from sqlalchemy.orm import Session
 
-from app.models import DeviceConnector
+from app.models import DeviceConnector, DeviceConnectorLog
 from app.schemas import DeviceConnectorCreate, DeviceConnectorUpdate
 
 
@@ -73,3 +73,37 @@ def update_last_sent_at(db: Session, connector_id: int, sent_at: datetime) -> No
         connector.last_sent_at = sent_at
         connector.updated_at = datetime.utcnow()
         db.commit()
+
+
+def create_connector_log(
+    db: Session,
+    connector_id: int,
+    triggered_at: datetime,
+    is_manual: bool,
+    status: str,
+    status_code: Optional[int] = None,
+    records_count: Optional[int] = None,
+    error_message: Optional[str] = None,
+) -> DeviceConnectorLog:
+    log = DeviceConnectorLog(
+        connector_id=connector_id,
+        triggered_at=triggered_at,
+        is_manual=is_manual,
+        status=status,
+        status_code=status_code,
+        records_count=records_count,
+        error_message=error_message,
+    )
+    db.add(log)
+    db.commit()
+    return log
+
+
+def get_connector_logs(db: Session, connector_id: int, limit: int = 50) -> List[DeviceConnectorLog]:
+    return (
+        db.query(DeviceConnectorLog)
+        .filter(DeviceConnectorLog.connector_id == connector_id)
+        .order_by(DeviceConnectorLog.triggered_at.desc())
+        .limit(limit)
+        .all()
+    )

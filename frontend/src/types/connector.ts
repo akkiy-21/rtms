@@ -38,3 +38,14 @@ export interface DeviceConnectorUpdate {
   is_enabled?: boolean;
   on_duplicate?: string;
 }
+
+export interface ConnectorLog {
+  id: number;
+  connector_id: number;
+  triggered_at: string;
+  is_manual: boolean;
+  status: 'success' | 'failed' | 'no_data';
+  status_code: number | null;
+  records_count: number | null;
+  error_message: string | null;
+}
