@@ -56,6 +56,11 @@ export const SETTINGS_LABELS = {
   CONNECTOR_TRIGGER_FAILED: '送信の実行に失敗しました',
   CONNECTOR_NOT_SENT_YET: '未送信',
   CONNECTOR_TYPE_AGGREGATED_DATA: '集計データ（生産実績）',
+  CONNECTOR_TYPE_ALARM_DATA: 'アラームデータ',
+  CONNECTOR_TYPES: {
+    aggregated_data: '集計データ（生産実績）',
+    alarm_data: 'アラームデータ',
+  } as Record<string, string>,
   INPUT_OUTPUT_SETTINGS: '入出力設定',
   IO_CONFIGURATION: `${TECHNICAL_TERMS.IO}設定`,
   DEVICE_IO_SETTINGS: `デバイスの${TECHNICAL_TERMS.IO}設定を管理します`,

@@ -6,6 +6,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
   Form,
   FormControl,
   FormField,
@@ -80,8 +87,30 @@ const ConnectorForm: React.FC<ConnectorFormProps> = ({ initialValues, onSubmit, 
           )}
         />
 
-        {/* connector_type: 現状は aggregated_data 固定、将来拡張用に hidden フィールドとして保持 */}
-        <input type="hidden" {...form.register('connector_type')} />
+        <FormField
+          control={form.control}
+          name="connector_type"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>{SETTINGS_LABELS.CONNECTOR_TYPE}</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="データ種別を選択" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {Object.entries(SETTINGS_LABELS.CONNECTOR_TYPES).map(([value, label]) => (
+                    <SelectItem key={value} value={value}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
         <FormField
           control={form.control}

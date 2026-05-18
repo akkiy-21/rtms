@@ -120,8 +120,7 @@ const ExternalConnectorsPage: React.FC = () => {
   };
 
   const getConnectorTypeLabel = (type: string) => {
-    if (type === 'aggregated_data') return SETTINGS_LABELS.CONNECTOR_TYPE_AGGREGATED_DATA;
-    return type;
+    return SETTINGS_LABELS.CONNECTOR_TYPES[type] ?? type;
   };
 
   if (loading) return <LoadingSpinner />;
