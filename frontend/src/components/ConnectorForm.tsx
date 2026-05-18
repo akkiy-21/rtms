@@ -27,6 +27,8 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { SETTINGS_LABELS } from '../localization/constants/settings-labels';
+import { VALIDATION_MESSAGES } from '../localization/constants/validation-messages';
+import { DeviceConnector, DeviceConnectorCreate, DeviceConnectorUpdate } from '../types/connector';
 
 const CONNECTOR_SCHEMAS: Record<string, { description: string; example: object; fields: { name: string; type: string; description: string }[] }> = {
   aggregated_data: {
@@ -96,8 +98,6 @@ const ConnectorTypeSchemaHelp: React.FC<{ connectorType: string }> = ({ connecto
     </Collapsible>
   );
 };
-import { VALIDATION_MESSAGES } from '../localization/constants/validation-messages';
-import { DeviceConnector, DeviceConnectorCreate, DeviceConnectorUpdate } from '../types/connector';
 
 const connectorFormSchema = z.object({
   name: z.string().min(1, VALIDATION_MESSAGES.REQUIRED(SETTINGS_LABELS.CONNECTOR_NAME)).max(100),
