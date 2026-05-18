@@ -49,7 +49,7 @@ const CONNECTOR_SCHEMAS: Record<string, { description: string; example: object; 
       { name: 'records[].ended_at', type: 'string', description: '集計期間の終了日時（ISO 8601）' },
       { name: 'records[].good_qty', type: 'integer', description: '良品数' },
       { name: 'records[].ng_qty', type: 'integer', description: '不良品数' },
-      { name: 'on_duplicate', type: 'string', description: '重複時の動作（固定値: "append"）' },
+      { name: 'on_duplicate', type: 'string', description: '重複時の動作（ignore: 無視 / update: 上書き）' },
     ],
   },
   alarm_data: {
@@ -120,6 +120,7 @@ const connectorFormSchema = z.object({
     .int()
     .min(1, '1日以上で設定してください'),
   is_enabled: z.boolean(),
+  on_duplicate: z.string().min(1),
 });
 
 type ConnectorFormValues = z.infer<typeof connectorFormSchema>;
@@ -142,6 +143,7 @@ const ConnectorForm: React.FC<ConnectorFormProps> = ({ initialValues, onSubmit, 
       send_interval_minutes: initialValues?.send_interval_minutes ?? 60,
       initial_sync_days: initialValues?.initial_sync_days ?? 7,
       is_enabled: initialValues?.is_enabled ?? true,
+      on_duplicate: initialValues?.on_duplicate ?? 'ignore',
     },
   });
 
@@ -262,6 +264,31 @@ const ConnectorForm: React.FC<ConnectorFormProps> = ({ initialValues, onSubmit, 
             )}
           />
         </div>
+
+        <FormField
+          control={form.control}
+          name="on_duplicate"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>{SETTINGS_LABELS.CONNECTOR_ON_DUPLICATE}</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {Object.entries(SETTINGS_LABELS.CONNECTOR_ON_DUPLICATES).map(([value, label]) => (
+                    <SelectItem key={value} value={value}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
         <FormField
           control={form.control}

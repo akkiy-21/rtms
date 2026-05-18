@@ -333,6 +333,7 @@ class DeviceConnector(Base):
     send_interval_minutes = Column(Integer, nullable=False, default=60)
     initial_sync_days = Column(Integer, nullable=False, default=7)
     is_enabled = Column(Boolean, nullable=False, default=True)
+    on_duplicate = Column(String(20), nullable=False, default='ignore')
     last_sent_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)

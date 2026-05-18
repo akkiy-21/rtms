@@ -9,6 +9,7 @@ export interface DeviceConnector {
   send_interval_minutes: number;
   initial_sync_days: number;
   is_enabled: boolean;
+  on_duplicate: string;
   last_sent_at: string | null;
   created_at: string;
   updated_at: string;
@@ -23,6 +24,7 @@ export interface DeviceConnectorCreate {
   send_interval_minutes: number;
   initial_sync_days: number;
   is_enabled: boolean;
+  on_duplicate: string;
 }
 
 export interface DeviceConnectorUpdate {
@@ -34,4 +36,5 @@ export interface DeviceConnectorUpdate {
   send_interval_minutes?: number;
   initial_sync_days?: number;
   is_enabled?: boolean;
+  on_duplicate?: string;
 }

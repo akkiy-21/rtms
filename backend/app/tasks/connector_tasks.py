@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 TZ = pytz.timezone("Asia/Tokyo")
 
 
-def _build_request_body(connector_type: str, records: list) -> dict:
+def _build_request_body(connector_type: str, on_duplicate: str, records: list) -> dict:
     """connector_type に応じたリクエストボディを生成する。
     将来の型追加時はここに新しい elif ブランチを追加するだけでよい。
     """
@@ -31,7 +31,7 @@ def _build_request_body(connector_type: str, records: list) -> dict:
                 }
                 for row in records
             ],
-            "on_duplicate": "append",
+            "on_duplicate": on_duplicate,
         }
     raise ValueError(f"Unknown connector_type: {connector_type}")
 
@@ -84,7 +84,7 @@ def send_connector_data(self, connector_id: int, manual: bool = False):
             connector_crud.update_last_sent_at(db, connector_id, now_utc)
             return
 
-        body = _build_request_body(connector.connector_type, records)
+        body = _build_request_body(connector.connector_type, connector.on_duplicate, records)
 
         with httpx.Client(timeout=30) as client:
             response = client.post(
