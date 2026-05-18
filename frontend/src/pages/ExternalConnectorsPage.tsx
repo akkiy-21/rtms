@@ -107,6 +107,8 @@ const ExternalConnectorsPage: React.FC = () => {
     try {
       await triggerConnector(deviceIdInt, connector.id);
       toast({ title: SETTINGS_LABELS.CONNECTOR_TRIGGER, description: SETTINGS_LABELS.CONNECTOR_TRIGGER_QUEUED });
+      // タスクは非同期実行のため、完了後に last_sent_at が更新される想定で遅延再取得
+      setTimeout(() => fetchAll(), 4000);
     } catch {
       toast({ title: SETTINGS_LABELS.CONNECTOR_TRIGGER_FAILED, variant: 'destructive' });
     } finally {

@@ -6,6 +6,7 @@ from typing import List, Optional
 
 import httpx
 import pytz
+from celery.exceptions import MaxRetriesExceededError
 
 from ..celery_app import celery_app
 from ..database import SessionLocal
@@ -110,10 +111,18 @@ def send_connector_data(self, connector_id: int, manual: bool = False):
             exc.response.status_code,
             exc.response.text[:200],
         )
-        raise self.retry(exc=exc)
+        try:
+            raise self.retry(exc=exc)
+        except MaxRetriesExceededError:
+            connector_crud.update_last_sent_at(db, connector_id, now_utc)
+            raise
     except httpx.RequestError as exc:
         logger.error("send_connector_data: request error for connector %s: %s", connector_id, exc)
-        raise self.retry(exc=exc)
+        try:
+            raise self.retry(exc=exc)
+        except MaxRetriesExceededError:
+            connector_crud.update_last_sent_at(db, connector_id, now_utc)
+            raise
     except Exception as exc:
         logger.exception("send_connector_data: unexpected error for connector %s", connector_id)
         raise
