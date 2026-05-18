@@ -64,9 +64,11 @@ export const SETTINGS_LABELS = {
   CONNECTOR_ON_DUPLICATE: '重複時の動作',
   CONNECTOR_ON_DUPLICATE_IGNORE: '重複を無視',
   CONNECTOR_ON_DUPLICATE_UPDATE: '重複を上書き',
+  CONNECTOR_ON_DUPLICATE_APPEND: '重複していても追加する',
   CONNECTOR_ON_DUPLICATES: {
     ignore: '重複を無視',
     update: '重複を上書き',
+    append: '重複していても追加する',
   } as Record<string, string>,
   INPUT_OUTPUT_SETTINGS: '入出力設定',
   IO_CONFIGURATION: `${TECHNICAL_TERMS.IO}設定`,
