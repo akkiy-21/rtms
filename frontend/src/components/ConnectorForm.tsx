@@ -42,14 +42,12 @@ const CONNECTOR_SCHEMAS: Record<string, { description: string; example: object; 
           ng_qty: 3,
         },
       ],
-      on_duplicate: 'append',
     },
     fields: [
       { name: 'records[].started_at', type: 'string', description: '集計期間の開始日時（ISO 8601）' },
       { name: 'records[].ended_at', type: 'string', description: '集計期間の終了日時（ISO 8601）' },
       { name: 'records[].good_qty', type: 'integer', description: '良品数' },
       { name: 'records[].ng_qty', type: 'integer', description: '不良品数' },
-      { name: 'on_duplicate', type: 'string', description: '重複時の動作（固定値: "append"）' },
     ],
   },
   alarm_data: {

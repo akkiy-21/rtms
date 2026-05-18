@@ -221,7 +221,7 @@ const ExternalConnectorsPage: React.FC = () => {
 
       {/* 追加/編集ダイアログ */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {editingConnector ? SETTINGS_LABELS.CONNECTOR_EDIT : SETTINGS_LABELS.CONNECTOR_ADD}
