@@ -989,7 +989,7 @@ class DeviceConnectorBase(BaseModel):
     send_interval_minutes: int = Field(default=60, ge=30)
     initial_sync_days: int = Field(default=7, ge=1)
     is_enabled: bool = True
-    on_duplicate: str = Field(default='ignore', max_length=20)
+    on_duplicate: str = Field(default='append', max_length=20)
 
 
 class DeviceConnectorCreate(DeviceConnectorBase):
