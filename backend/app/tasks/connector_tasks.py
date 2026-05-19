@@ -45,6 +45,20 @@ def _build_request_body(connector_type: str, on_duplicate: str, records: list) -
             ],
             "on_duplicate": on_duplicate,
         }
+    if connector_type == "alarm_data":
+        return {
+            "records": [
+                {
+                    "alarm_group": row[0],
+                    "alarm_no": row[1],
+                    "alarm_name": row[2],
+                    "started_at": row[3],
+                    "ended_at": row[4],
+                }
+                for row in records
+            ],
+            "on_duplicate": on_duplicate,
+        }
     raise ValueError(f"Unknown connector_type: {connector_type}")
 
 
@@ -89,6 +103,14 @@ def send_connector_data(connector_id: int, manual: bool = False):
                 device_id=connector.device_id,
                 start_date=start_date,
                 end_date=end_date,
+            )
+        elif connector.connector_type == "alarm_data":
+            records = data_service.get_alarm_state_intervals(
+                db,
+                device_id=connector.device_id,
+                start_date=start_date,
+                end_date=end_date,
+                alarm_group_id=connector.alarm_group_id,
             )
         else:
             records = data_service.get_aggregated_data(

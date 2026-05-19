@@ -85,3 +85,109 @@ def get_efficiency_measurements_bulk(db: Session, device_id: int, start_datetime
         models.EfficiencyMeasurements.event_time,
     ).all()
     return [(r.classification_group, r.classification_status_name, r.classification_status, r.event_time) for r in rows]
+
+
+def get_latest_alarm_states(db: Session, device_id: int) -> dict:
+    """デバイスの各 (alarm_group_id, alarm_no) について最新レコードの alarm_state を返す。
+    戻り値: {(alarm_group_id, alarm_no): alarm_state}
+    """
+    subq = db.query(
+        models.AlarmMeasurements.alarm_group_id,
+        models.AlarmMeasurements.alarm_no,
+        func.max(models.AlarmMeasurements.event_time).label('max_time'),
+    ).filter(
+        models.AlarmMeasurements.device_id == device_id,
+    ).group_by(
+        models.AlarmMeasurements.alarm_group_id,
+        models.AlarmMeasurements.alarm_no,
+    ).subquery()
+
+    rows = db.query(
+        models.AlarmMeasurements.alarm_group_id,
+        models.AlarmMeasurements.alarm_no,
+        models.AlarmMeasurements.alarm_state,
+    ).join(
+        subq,
+        and_(
+            models.AlarmMeasurements.alarm_group_id == subq.c.alarm_group_id,
+            models.AlarmMeasurements.alarm_no == subq.c.alarm_no,
+            models.AlarmMeasurements.event_time == subq.c.max_time,
+        ),
+    ).filter(
+        models.AlarmMeasurements.device_id == device_id,
+    ).all()
+
+    return {(r.alarm_group_id, r.alarm_no): r.alarm_state for r in rows}
+
+
+def get_latest_efficiency_states(db: Session, device_id: int) -> dict:
+    """デバイスの各 (classification_group, classification_status_name) について最新レコードの classification_status を返す。
+    戻り値: {(classification_group, classification_status_name): classification_status}
+    """
+    subq = db.query(
+        models.EfficiencyMeasurements.classification_group,
+        models.EfficiencyMeasurements.classification_status_name,
+        func.max(models.EfficiencyMeasurements.event_time).label('max_time'),
+    ).filter(
+        models.EfficiencyMeasurements.device_id == device_id,
+    ).group_by(
+        models.EfficiencyMeasurements.classification_group,
+        models.EfficiencyMeasurements.classification_status_name,
+    ).subquery()
+
+    rows = db.query(
+        models.EfficiencyMeasurements.classification_group,
+        models.EfficiencyMeasurements.classification_status_name,
+        models.EfficiencyMeasurements.classification_status,
+    ).join(
+        subq,
+        and_(
+            models.EfficiencyMeasurements.classification_group == subq.c.classification_group,
+            models.EfficiencyMeasurements.classification_status_name == subq.c.classification_status_name,
+            models.EfficiencyMeasurements.event_time == subq.c.max_time,
+        ),
+    ).filter(
+        models.EfficiencyMeasurements.device_id == device_id,
+    ).all()
+
+    return {(r.classification_group, r.classification_status_name): r.classification_status for r in rows}
+
+
+def get_alarm_measurements_bulk(
+    db: Session,
+    device_id: int,
+    start_datetime: datetime,
+    end_datetime: datetime,
+    alarm_group_id: int = None,
+):
+    """指定期間のアラームデータを一括取得して
+    (alarm_group_name, alarm_group_id, alarm_no, alarm_name, alarm_state, event_time) のリストで返す。
+    alarm_group_id を指定すると該当グループのみに絞り込む。
+    """
+    query = db.query(
+        models.AlarmGroups.name.label('alarm_group_name'),
+        models.AlarmMeasurements.alarm_group_id,
+        models.AlarmMeasurements.alarm_no,
+        models.AlarmMeasurements.alarm_name,
+        models.AlarmMeasurements.alarm_state,
+        models.AlarmMeasurements.event_time,
+    ).join(
+        models.AlarmGroups,
+        models.AlarmMeasurements.alarm_group_id == models.AlarmGroups.id,
+    ).filter(
+        models.AlarmMeasurements.device_id == device_id,
+        models.AlarmMeasurements.event_time >= start_datetime,
+        models.AlarmMeasurements.event_time < end_datetime,
+    )
+    if alarm_group_id is not None:
+        query = query.filter(models.AlarmMeasurements.alarm_group_id == alarm_group_id)
+
+    rows = query.order_by(
+        models.AlarmMeasurements.alarm_group_id,
+        models.AlarmMeasurements.alarm_no,
+        models.AlarmMeasurements.event_time,
+    ).all()
+    return [
+        (r.alarm_group_name, r.alarm_group_id, r.alarm_no, r.alarm_name, r.alarm_state, r.event_time)
+        for r in rows
+    ]

@@ -29,6 +29,7 @@ import {
 import { SETTINGS_LABELS } from '../localization/constants/settings-labels';
 import { VALIDATION_MESSAGES } from '../localization/constants/validation-messages';
 import { DeviceConnector, DeviceConnectorCreate, DeviceConnectorUpdate } from '../types/connector';
+import { AlarmGroup } from '../types/alarm';
 
 const CONNECTOR_SCHEMAS: Record<string, { description: string; example: object; fields: { name: string; type: string; description: string }[] }> = {
   aggregated_data: {
@@ -53,9 +54,27 @@ const CONNECTOR_SCHEMAS: Record<string, { description: string; example: object; 
     ],
   },
   alarm_data: {
-    description: 'アラームデータ（未実装）',
-    example: {},
-    fields: [],
+    description: 'アラームの発生〜解除区間を配列で送信します。送信時点でまだ解除されていないアラームはended_atを送信時刻で仮締めします。',
+    example: {
+      records: [
+        {
+          alarm_group: 'アラームグループ1',
+          alarm_no: 1,
+          alarm_name: 'アラーム名',
+          started_at: '2026-05-18T08:00:00',
+          ended_at: '2026-05-18T08:05:00',
+        },
+      ],
+      on_duplicate: 'append',
+    },
+    fields: [
+      { name: 'records[].alarm_group', type: 'string', description: 'アラームグループ名' },
+      { name: 'records[].alarm_no', type: 'integer', description: 'アラーム番号' },
+      { name: 'records[].alarm_name', type: 'string', description: 'アラーム名' },
+      { name: 'records[].started_at', type: 'string', description: 'アラーム発生日時（JST）' },
+      { name: 'records[].ended_at', type: 'string', description: 'アラーム解除日時（JST）。進行中の場合は送信時刻で仮締め' },
+      { name: 'on_duplicate', type: 'string', description: '重複時の動作（append: 常に追加 / skip: 重複スキップ / upsert: 上書き更新）' },
+    ],
   },
   efficiency_data: {
     description: 'OEE損失分類ごとのON区間（開始〜終了）を配列で送信します。送信時点でまだ進行中の区間はended_atを送信時刻で仮締めします。',
@@ -142,17 +161,19 @@ const connectorFormSchema = z.object({
     .min(1, '1日以上で設定してください'),
   is_enabled: z.boolean(),
   on_duplicate: z.string().min(1),
+  alarm_group_id: z.number().nullable().optional(),
 });
 
 type ConnectorFormValues = z.infer<typeof connectorFormSchema>;
 
 interface ConnectorFormProps {
   initialValues?: DeviceConnector;
+  alarmGroups?: AlarmGroup[];
   onSubmit: (data: DeviceConnectorCreate | DeviceConnectorUpdate) => void;
   onCancel: () => void;
 }
 
-const ConnectorForm: React.FC<ConnectorFormProps> = ({ initialValues, onSubmit, onCancel }) => {
+const ConnectorForm: React.FC<ConnectorFormProps> = ({ initialValues, alarmGroups = [], onSubmit, onCancel }) => {
   const form = useForm<ConnectorFormValues>({
     resolver: zodResolver(connectorFormSchema),
     defaultValues: {
@@ -165,8 +186,10 @@ const ConnectorForm: React.FC<ConnectorFormProps> = ({ initialValues, onSubmit, 
       initial_sync_days: initialValues?.initial_sync_days ?? 7,
       is_enabled: initialValues?.is_enabled ?? true,
       on_duplicate: initialValues?.on_duplicate ?? 'append',
+      alarm_group_id: initialValues?.alarm_group_id ?? null,
     },
   });
+  const watchedConnectorType = form.watch('connector_type');
 
   return (
     <Form {...form}>
@@ -210,7 +233,38 @@ const ConnectorForm: React.FC<ConnectorFormProps> = ({ initialValues, onSubmit, 
           )}
         />
 
-        <ConnectorTypeSchemaHelp connectorType={form.watch('connector_type')} />
+        <ConnectorTypeSchemaHelp connectorType={watchedConnectorType} />
+
+        {watchedConnectorType === 'alarm_data' && (
+          <FormField
+            control={form.control}
+            name="alarm_group_id"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>対象アラームグループ（未選択で全グループ）</FormLabel>
+                <Select
+                  onValueChange={(val) => field.onChange(val === '__all__' ? null : parseInt(val))}
+                  value={field.value == null ? '__all__' : String(field.value)}
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="全グループ" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="__all__">全グループ</SelectItem>
+                    {alarmGroups.map((g) => (
+                      <SelectItem key={g.id} value={String(g.id)}>
+                        {g.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
 
         <FormField
           control={form.control}

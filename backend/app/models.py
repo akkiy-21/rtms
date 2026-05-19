@@ -334,12 +334,14 @@ class DeviceConnector(Base):
     initial_sync_days = Column(Integer, nullable=False, default=7)
     is_enabled = Column(Boolean, nullable=False, default=True)
     on_duplicate = Column(String(20), nullable=False, default='append')
+    alarm_group_id = Column(Integer, ForeignKey('alarm_groups.id', ondelete='SET NULL'), nullable=True)
     last_sent_at = Column(DateTime, nullable=True)
     last_dispatched_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     device = relationship("Devices", back_populates="connectors")
+    alarm_group_rel = relationship("AlarmGroups", foreign_keys=[alarm_group_id])
     logs = relationship("DeviceConnectorLog", back_populates="connector", cascade="all, delete-orphan",
                         order_by="DeviceConnectorLog.triggered_at.desc()")
 

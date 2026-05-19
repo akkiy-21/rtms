@@ -471,6 +471,7 @@ class PLCBridge:
         self.plcs = []
         self.previous_data = defaultdict(lambda: defaultdict(int))
         self.previous_trigger_states = defaultdict(lambda: defaultdict(bool))
+        self.is_first_scan: dict = {}  # bridge_name -> bool: 起動後の初回スキャン判定
         
         self.config_websocket = None
         self.data_websocket = None
@@ -1261,8 +1262,35 @@ class PLCBridge:
             current_value = data.get(raw_data_name)
 
             if current_value is not None:
+                # 初回スキャン: 現在の全状態をスナップショットとして送信
+                if not self.is_first_scan.get(data_name, False):
+                    self.is_first_scan[data_name] = True
+                    snapshot_message = {
+                        'timestamp': message.get('timestamp', int(time.time() * 1000)),
+                        'name': 'efficiency_snapshot',
+                        'data': {}
+                    }
+                    if isinstance(current_value, bool):
+                        snapshot_message['data'][bridge_data['class_name']] = {
+                            'state': current_value,
+                            'name': raw_data_name
+                        }
+                    elif isinstance(current_value, (int, list)):
+                        base_addr, bit_position = self.parse_bit_address(bridge_data['address'])
+                        if bit_position is not None:
+                            current_bit_state = self.get_bit_state(current_value, bit_position)
+                            snapshot_message['data'][bridge_data['class_name']] = {
+                                'state': current_bit_state,
+                                'name': raw_data_name,
+                                'bit_position': bit_position,
+                                'raw_value': current_value[0] if isinstance(current_value, list) else current_value
+                            }
+                    if snapshot_message['data']:
+                        await self.cast_data(snapshot_message)
+                        logger.debug(f"Efficiency snapshot sent for {data_name}")
+
                 previous_value = self.previous_data[data_name].get(raw_data_name, False)
-                
+
                 if isinstance(current_value, bool):
                     if current_value != previous_value:
                         message['data'][bridge_data['class_name']] = {
@@ -1305,8 +1333,35 @@ class PLCBridge:
             current_value = data.get(raw_data_name)
 
             if current_value is not None:
+                # 初回スキャン: 全ビットの現在状態をスナップショットとして送信
+                if not self.is_first_scan.get(data_name, False):
+                    self.is_first_scan[data_name] = True
+                    snapshot_message = {
+                        'timestamp': message.get('timestamp', int(time.time() * 1000)),
+                        'name': 'alarm_snapshot',
+                        'data': {}
+                    }
+                    if isinstance(current_value, bool):
+                        snapshot_message['data'][bridge_data['class_name']] = {
+                            'state': current_value,
+                            'name': raw_data_name
+                        }
+                    elif isinstance(current_value, (int, list)):
+                        num_words = len(current_value) if isinstance(current_value, list) else 1
+                        current_bits = self.word_to_bits(current_value, num_words)
+                        all_bits = {}
+                        for i in range(len(current_bits)):
+                            state = bool(current_bits[i])
+                            comments = self.generate_comments(i, bridge_name, bridge_data.get('meta_data'))
+                            all_bits[i] = {'state': state, 'comment': comments}
+                        if all_bits:
+                            snapshot_message['data'][raw_data_name] = all_bits
+                    if snapshot_message['data']:
+                        await self.cast_data(snapshot_message)
+                        logger.debug(f"Alarm snapshot sent for {data_name}: {len(snapshot_message['data'])} groups")
+
                 previous_value = self.previous_data[data_name].get(raw_data_name, False)
-                
+
                 if isinstance(current_value, bool):
                     if current_value != previous_value:
                         message['data'][bridge_data['class_name']] = {

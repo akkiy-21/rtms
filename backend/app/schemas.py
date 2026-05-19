@@ -992,6 +992,7 @@ class DeviceConnectorBase(BaseModel):
     initial_sync_days: int = Field(default=7, ge=1)
     is_enabled: bool = True
     on_duplicate: str = Field(default='append', max_length=20)
+    alarm_group_id: Optional[int] = None
 
 
 class DeviceConnectorCreate(DeviceConnectorBase):
@@ -1008,6 +1009,7 @@ class DeviceConnectorUpdate(BaseModel):
     initial_sync_days: Optional[int] = Field(None, ge=1)
     is_enabled: Optional[bool] = None
     on_duplicate: Optional[str] = Field(None, max_length=20)
+    alarm_group_id: Optional[int] = None
 
 
 class DeviceConnectorResponse(DeviceConnectorBase):

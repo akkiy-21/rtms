@@ -15,7 +15,7 @@ import { ErrorMessage } from '@/components/common/error-message';
 import { ConfirmationDialog } from '@/components/common/confirmation-dialog';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { getDevice } from '../services/api';
+import { getDevice, getAlarmGroups } from '../services/api';
 import {
   getConnectors,
   createConnector,
@@ -28,12 +28,14 @@ import { NAVIGATION_LABELS } from '../localization/constants/navigation-labels';
 import { SETTINGS_LABELS } from '../localization/constants/settings-labels';
 import { ConnectorLog, DeviceConnector, DeviceConnectorCreate, DeviceConnectorUpdate } from '../types/connector';
 import { Device } from '../types/device';
+import { AlarmGroup } from '../types/alarm';
 import ConnectorForm from '../components/ConnectorForm';
 
 const ExternalConnectorsPage: React.FC = () => {
   const { deviceId } = useParams<{ deviceId: string }>();
   const [device, setDevice] = useState<Device | null>(null);
   const [connectors, setConnectors] = useState<DeviceConnector[]>([]);
+  const [alarmGroups, setAlarmGroups] = useState<AlarmGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -57,12 +59,14 @@ const ExternalConnectorsPage: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
-      const [fetchedDevice, fetchedConnectors] = await Promise.all([
+      const [fetchedDevice, fetchedConnectors, fetchedAlarmGroups] = await Promise.all([
         getDevice(deviceIdInt),
         getConnectors(deviceIdInt),
+        getAlarmGroups(deviceIdInt),
       ]);
       setDevice(fetchedDevice);
       setConnectors(fetchedConnectors);
+      setAlarmGroups(fetchedAlarmGroups);
     } catch {
       setError(SETTINGS_LABELS.CONNECTOR_FETCH_FAILED);
     } finally {
@@ -182,6 +186,7 @@ const ExternalConnectorsPage: React.FC = () => {
               <tr className="border-b bg-muted/50">
                 <th className="px-4 py-3 text-left font-medium">{SETTINGS_LABELS.CONNECTOR_NAME}</th>
                 <th className="px-4 py-3 text-left font-medium">{SETTINGS_LABELS.CONNECTOR_TYPE}</th>
+                <th className="px-4 py-3 text-left font-medium">対象グループ</th>
                 <th className="px-4 py-3 text-left font-medium">{SETTINGS_LABELS.CONNECTOR_SEND_INTERVAL}</th>
                 <th className="px-4 py-3 text-left font-medium">{SETTINGS_LABELS.CONNECTOR_IS_ENABLED}</th>
                 <th className="px-4 py-3 text-left font-medium">{SETTINGS_LABELS.CONNECTOR_LAST_SENT_AT}</th>
@@ -194,6 +199,13 @@ const ExternalConnectorsPage: React.FC = () => {
                   <td className="px-4 py-3 font-medium">{connector.name}</td>
                   <td className="px-4 py-3 text-muted-foreground">
                     {getConnectorTypeLabel(connector.connector_type)}
+                  </td>
+                  <td className="px-4 py-3 text-muted-foreground text-xs">
+                    {connector.connector_type === 'alarm_data'
+                      ? (connector.alarm_group_id
+                          ? (alarmGroups.find((g) => g.id === connector.alarm_group_id)?.name ?? '-')
+                          : '全グループ')
+                      : '-'}
                   </td>
                   <td className="px-4 py-3">{connector.send_interval_minutes}分</td>
                   <td className="px-4 py-3">
@@ -320,6 +332,7 @@ const ExternalConnectorsPage: React.FC = () => {
           </DialogHeader>
           <ConnectorForm
             initialValues={editingConnector ?? undefined}
+            alarmGroups={alarmGroups}
             onSubmit={handleSave}
             onCancel={() => setDialogOpen(false)}
           />

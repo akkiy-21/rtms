@@ -57,6 +57,10 @@ class MQTTClient:
                     data_service.process_logging_data(db, device.id, data['data'], event_time)
                 elif data_type == 'alarm':
                     data_service.process_alarm_data(db, device.id, data['data'], event_time)
+                elif data_type == 'alarm_snapshot':
+                    data_service.process_alarm_snapshot(db, device.id, data['data'], event_time)
+                elif data_type == 'efficiency_snapshot':
+                    data_service.process_efficiency_snapshot(db, device.id, data['data'], event_time)
                 else:
                     print(f"Unknown data type: {data_type}")
             else:

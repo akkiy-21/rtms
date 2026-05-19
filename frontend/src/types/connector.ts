@@ -10,6 +10,7 @@ export interface DeviceConnector {
   initial_sync_days: number;
   is_enabled: boolean;
   on_duplicate: string;
+  alarm_group_id: number | null;
   last_sent_at: string | null;
   created_at: string;
   updated_at: string;
@@ -25,6 +26,7 @@ export interface DeviceConnectorCreate {
   initial_sync_days: number;
   is_enabled: boolean;
   on_duplicate: string;
+  alarm_group_id?: number | null;
 }
 
 export interface DeviceConnectorUpdate {
@@ -37,6 +39,7 @@ export interface DeviceConnectorUpdate {
   initial_sync_days?: number;
   is_enabled?: boolean;
   on_duplicate?: string;
+  alarm_group_id?: number | null;
 }
 
 export interface ConnectorLog {
