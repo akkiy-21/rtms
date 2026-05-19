@@ -154,7 +154,8 @@ def delete_alarm_measurement(device_id: int, measurement_id: int, db: Session = 
     return {
         "id": measurement.id,
         "device_id": measurement.device_id,
-        "alarm_group": measurement.alarm_group,
+        "alarm_group_id": measurement.alarm_group_id,
         "alarm_no": measurement.alarm_no,
+        "alarm_name": measurement.alarm_name,
         "event_time": measurement.event_time
     }

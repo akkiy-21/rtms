@@ -665,12 +665,14 @@ class AlarmMeasurements(Base):
     __tablename__ = 'alarm_measurements'
     id = Column(Integer, primary_key=True, autoincrement=True)
     device_id = Column(Integer, ForeignKey('devices.id'), nullable=False)
-    alarm_group = Column(String(100), nullable=False)
+    alarm_group_id = Column(Integer, ForeignKey('alarm_groups.id'), nullable=False)
     alarm_no = Column(Integer, nullable=False)
+    alarm_name = Column(String(255), nullable=True)
     alarm_state = Column(Boolean, nullable=False)
     event_time = Column(DateTime(timezone=True), nullable=False)
 
     device = relationship("Devices", back_populates="alarm_measurements")
+    alarm_group_rel = relationship("AlarmGroups")
     comments = relationship("AlarmMeasurementComments", back_populates="alarm_measurement")
 
     __table_args__ = (

@@ -949,8 +949,9 @@ class EfficiencyMeasurementResponse(BaseModel):
 
 class AlarmMeasurementBase(BaseModel):
     device_id: int
-    alarm_group: str
+    alarm_group_id: int
     alarm_no: int
+    alarm_name: Optional[str] = None
     alarm_state: bool
     event_time: datetime
 
@@ -966,8 +967,9 @@ class AlarmMeasurement(AlarmMeasurementBase):
 class AlarmMeasurementResponse(BaseModel):
     id: int
     device_id: int
-    alarm_group: str
+    alarm_group_id: int
     alarm_no: int
+    alarm_name: Optional[str] = None
     event_time: datetime
 
     class Config:

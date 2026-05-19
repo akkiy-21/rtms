@@ -1,9 +1,13 @@
 # data_service.py
 from datetime import datetime
 from app.crud import data_crud, time_table_crud
+from app import models
 from sqlalchemy.orm import Session
 from datetime import date, timedelta
+import logging
 import pytz
+
+logger = logging.getLogger(__name__)
 
 def process_efficiency_data(db: Session, device_id: int, data: dict, event_time: int):
     for group, status in data.items():
@@ -53,18 +57,35 @@ def process_logging_data(db: Session, device_id: int, data: dict, event_time: in
         data_crud.create_logging_data_measurement_group(db, measurement_group)
 
 def process_alarm_data(db: Session, device_id: int, data: dict, event_time: int):
+    # alarm_group 名 → alarm_group_id のキャッシュを一括取得（N+1回避）
+    group_names = list(data.keys())
+    groups = db.query(models.AlarmGroups).filter(
+        models.AlarmGroups.device_id == device_id,
+        models.AlarmGroups.name.in_(group_names),
+    ).all()
+    group_id_map = {g.name: g.id for g in groups}
+
     for alarm_group, alarms in data.items():
+        alarm_group_id = group_id_map.get(alarm_group)
+        if alarm_group_id is None:
+            logger.warning(f"alarm_group '{alarm_group}' not found for device_id={device_id}, skipping")
+            continue
+
         for alarm_no, alarm_data in alarms.items():
+            comments = alarm_data.get('comment', [])
+            alarm_name = comments[0] if comments else None
+
             alarm_measurement = {
                 "device_id": device_id,
-                "alarm_group": alarm_group,
+                "alarm_group_id": alarm_group_id,
                 "alarm_no": int(alarm_no),
+                "alarm_name": alarm_name,
                 "alarm_state": alarm_data['state'],
                 "event_time": datetime.fromtimestamp(event_time)
             }
             created_alarm = data_crud.create_alarm_measurement(db, alarm_measurement)
 
-            for comment in alarm_data.get('comment', []):
+            for comment in comments:
                 alarm_comment = {
                     "alarm_measurement_id": created_alarm.id,
                     "alarm_comment": comment
