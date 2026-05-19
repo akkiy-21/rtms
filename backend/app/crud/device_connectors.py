@@ -37,6 +37,8 @@ def create_connector(db: Session, device_id: int, data: DeviceConnectorCreate) -
         send_interval_minutes=data.send_interval_minutes,
         initial_sync_days=data.initial_sync_days,
         is_enabled=data.is_enabled,
+        on_duplicate=data.on_duplicate,
+        alarm_group_id=data.alarm_group_id,
         created_at=now,
         updated_at=now,
     )
