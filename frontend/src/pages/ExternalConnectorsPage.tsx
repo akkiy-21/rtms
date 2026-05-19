@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { Plus, Play, Pencil, Trash2, History } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -18,28 +18,24 @@ import { useToast } from '@/hooks/use-toast';
 import { getDevice, getAlarmGroups } from '../services/api';
 import {
   getConnectors,
-  createConnector,
-  updateConnector,
   deleteConnector,
   triggerConnector,
   getConnectorLogs,
 } from '../services/connectorApi';
 import { NAVIGATION_LABELS } from '../localization/constants/navigation-labels';
 import { SETTINGS_LABELS } from '../localization/constants/settings-labels';
-import { ConnectorLog, DeviceConnector, DeviceConnectorCreate, DeviceConnectorUpdate } from '../types/connector';
+import { ConnectorLog, DeviceConnector } from '../types/connector';
 import { Device } from '../types/device';
 import { AlarmGroup } from '../types/alarm';
-import ConnectorForm from '../components/ConnectorForm';
 
 const ExternalConnectorsPage: React.FC = () => {
   const { deviceId } = useParams<{ deviceId: string }>();
+  const navigate = useNavigate();
   const [device, setDevice] = useState<Device | null>(null);
   const [connectors, setConnectors] = useState<DeviceConnector[]>([]);
   const [alarmGroups, setAlarmGroups] = useState<AlarmGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingConnector, setEditingConnector] = useState<DeviceConnector | null>(null);
   const [deleteConnectorId, setDeleteConnectorId] = useState<number | null>(null);
   const [triggeringId, setTriggeringId] = useState<number | null>(null);
   const [logsDialogOpen, setLogsDialogOpen] = useState(false);
@@ -75,28 +71,11 @@ const ExternalConnectorsPage: React.FC = () => {
   };
 
   const handleOpenCreate = () => {
-    setEditingConnector(null);
-    setDialogOpen(true);
+    navigate(`/devices/${deviceId}/detail-settings/external-connectors/new`);
   };
 
   const handleOpenEdit = (connector: DeviceConnector) => {
-    setEditingConnector(connector);
-    setDialogOpen(true);
-  };
-
-  const handleSave = async (data: DeviceConnectorCreate | DeviceConnectorUpdate) => {
-    try {
-      if (editingConnector) {
-        await updateConnector(deviceIdInt, editingConnector.id, data as DeviceConnectorUpdate);
-      } else {
-        await createConnector(deviceIdInt, data as DeviceConnectorCreate);
-      }
-      setDialogOpen(false);
-      await fetchAll();
-      toast({ title: editingConnector ? SETTINGS_LABELS.CONNECTOR_EDIT : SETTINGS_LABELS.CONNECTOR_ADD, description: '保存しました' });
-    } catch {
-      toast({ title: SETTINGS_LABELS.CONNECTOR_SAVE_FAILED, variant: 'destructive' });
-    }
+    navigate(`/devices/${deviceId}/detail-settings/external-connectors/${connector.id}/edit`);
   };
 
   const handleDelete = async () => {
@@ -318,24 +297,6 @@ const ExternalConnectorsPage: React.FC = () => {
               </tbody>
             </table>
           )}
-        </DialogContent>
-      </Dialog>
-
-      {/* 追加/編集ダイアログ */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
-              {editingConnector ? SETTINGS_LABELS.CONNECTOR_EDIT : SETTINGS_LABELS.CONNECTOR_ADD}
-            </DialogTitle>
-            <DialogDescription>{SETTINGS_LABELS.EXTERNAL_CONNECTORS_DESCRIPTION}</DialogDescription>
-          </DialogHeader>
-          <ConnectorForm
-            initialValues={editingConnector ?? undefined}
-            alarmGroups={alarmGroups}
-            onSubmit={handleSave}
-            onCancel={() => setDialogOpen(false)}
-          />
         </DialogContent>
       </Dialog>
 

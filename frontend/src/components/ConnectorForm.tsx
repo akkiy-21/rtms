@@ -171,9 +171,10 @@ interface ConnectorFormProps {
   alarmGroups?: AlarmGroup[];
   onSubmit: (data: DeviceConnectorCreate | DeviceConnectorUpdate) => void;
   onCancel: () => void;
+  isSubmitting?: boolean;
 }
 
-const ConnectorForm: React.FC<ConnectorFormProps> = ({ initialValues, alarmGroups = [], onSubmit, onCancel }) => {
+const ConnectorForm: React.FC<ConnectorFormProps> = ({ initialValues, alarmGroups = [], onSubmit, onCancel, isSubmitting = false }) => {
   const form = useForm<ConnectorFormValues>({
     resolver: zodResolver(connectorFormSchema),
     defaultValues: {
@@ -379,10 +380,12 @@ const ConnectorForm: React.FC<ConnectorFormProps> = ({ initialValues, alarmGroup
         />
 
         <div className="flex justify-end gap-2 pt-2">
-          <Button type="button" variant="outline" onClick={onCancel}>
+          <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
             キャンセル
           </Button>
-          <Button type="submit">保存</Button>
+          <Button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? '保存中...' : '保存'}
+          </Button>
         </div>
       </form>
     </Form>
