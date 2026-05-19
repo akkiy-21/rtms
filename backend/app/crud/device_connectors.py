@@ -75,6 +75,14 @@ def update_last_sent_at(db: Session, connector_id: int, sent_at: datetime) -> No
         db.commit()
 
 
+def update_last_dispatched_at(db: Session, connector_id: int, dispatched_at: datetime) -> None:
+    connector = get_connector(db, connector_id)
+    if connector is not None:
+        connector.last_dispatched_at = dispatched_at
+        connector.updated_at = datetime.utcnow()
+        db.commit()
+
+
 def create_connector_log(
     db: Session,
     connector_id: int,

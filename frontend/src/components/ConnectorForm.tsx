@@ -57,6 +57,27 @@ const CONNECTOR_SCHEMAS: Record<string, { description: string; example: object; 
     example: {},
     fields: [],
   },
+  efficiency_data: {
+    description: 'OEE損失分類ごとのON区間（開始〜終了）を配列で送信します。送信時点でまだ進行中の区間はended_atを送信時刻で仮締めします。',
+    example: {
+      records: [
+        {
+          group: '操業時間',
+          status_name: '稼働中',
+          started_at: '2026-05-18 08:00:00',
+          ended_at: '2026-05-18 09:30:00',
+        },
+      ],
+      on_duplicate: 'append',
+    },
+    fields: [
+      { name: 'records[].group', type: 'string', description: '稼働分類グループ名' },
+      { name: 'records[].status_name', type: 'string', description: 'ONになっている状態の名称' },
+      { name: 'records[].started_at', type: 'string', description: 'ON区間の開始日時（JST）' },
+      { name: 'records[].ended_at', type: 'string', description: 'ON区間の終了日時（JST）。進行中の場合は送信時刻で仮締め' },
+      { name: 'on_duplicate', type: 'string', description: '重複時の動作（append: 常に追加 / skip: 重複スキップ / upsert: 上書き更新）' },
+    ],
+  },
 };
 
 const ConnectorTypeSchemaHelp: React.FC<{ connectorType: string }> = ({ connectorType }) => {

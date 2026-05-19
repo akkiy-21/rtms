@@ -1012,6 +1012,7 @@ class DeviceConnectorResponse(DeviceConnectorBase):
     id: int
     device_id: int
     last_sent_at: Optional[datetime] = None
+    last_dispatched_at: Optional[datetime] = None
     created_at: datetime
     updated_at: datetime
 

@@ -71,6 +71,70 @@ def process_alarm_data(db: Session, device_id: int, data: dict, event_time: int)
                 }
                 data_crud.create_alarm_measurement_comment(db, alarm_comment)
 
+def get_efficiency_state_intervals(db: Session, device_id: int, start_date: date, end_date: date):
+    """稼働分類ログのON区間リストを返す。
+    DBには状態変化時のみレコードが存在するため、各Trueレコードと次のFalseレコードをペアにして区間を構築する。
+    送信時点でまだONの場合はended_atを現在時刻（仮締め）とする。
+    返却: [[group, status_name, started_at_str, ended_at_str], ...]（JST文字列）
+    """
+    from collections import defaultdict
+
+    tz = pytz.timezone('Asia/Tokyo')
+    now_local = datetime.now(tz)
+
+    range_start = tz.localize(datetime.combine(start_date, datetime.min.time()))
+    range_end = tz.localize(datetime.combine(end_date + timedelta(days=1), datetime.min.time()))
+
+    rows = data_crud.get_efficiency_measurements_bulk(db, device_id, range_start, range_end)
+
+    groups: dict = defaultdict(list)
+    for group, status_name, status, event_time in rows:
+        groups[group].append((status_name, status, event_time))
+
+    results = []
+    for group, events in groups.items():
+        pending_start = None
+        pending_name = None
+        for status_name, status, event_time in events:
+            if event_time.tzinfo is None:
+                event_time = tz.localize(event_time)
+            else:
+                event_time = event_time.astimezone(tz)
+            if status and pending_start is None:
+                pending_start = event_time
+                pending_name = status_name
+            elif not status and pending_start is not None:
+                results.append([
+                    group,
+                    pending_name,
+                    pending_start.strftime('%Y-%m-%d %H:%M:%S'),
+                    event_time.strftime('%Y-%m-%d %H:%M:%S'),
+                ])
+                pending_start = None
+                pending_name = None
+        if pending_start is not None:
+            results.append([
+                group,
+                pending_name,
+                pending_start.strftime('%Y-%m-%d %H:%M:%S'),
+                now_local.strftime('%Y-%m-%d %H:%M:%S'),
+            ])
+
+    # 各区間の隙間を「停止ロス時間 / 停止中」で補完する。
+    # クエリ範囲の先頭・末尾はデバイス稼働状況が不明なため補完しない。
+    if results:
+        sorted_results = sorted(results, key=lambda x: x[2])
+        filled: list = []
+        for i, interval in enumerate(sorted_results):
+            filled.append(interval)
+            if i < len(sorted_results) - 1:
+                next_interval = sorted_results[i + 1]
+                if interval[3] < next_interval[2]:
+                    filled.append(["停止ロス時間", "停止中", interval[3], next_interval[2]])
+        results = filled
+
+    return results
+
 def get_aggregated_data(db: Session, device_id: int, start_date: date, end_date: date, interval_minutes: int = 60):
     # タイムゾーンの設定
     tz = pytz.timezone('Asia/Tokyo')

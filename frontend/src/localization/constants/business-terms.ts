@@ -70,7 +70,7 @@ export const BUSINESS_TERMS = {
   LOGGING: 'ロギング',
   
   // 効率性関連
-  EFFICIENCY: '効率性',
+  EFFICIENCY: '稼働分類',
   PERFORMANCE: 'パフォーマンス',
   
   // 品質管理関連

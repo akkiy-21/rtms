@@ -68,3 +68,20 @@ def get_quality_counts_bulk(db: Session, device_id: int, start_datetime: datetim
         models.QualityControlMeasurements.quality_type.in_(['Good', 'Ng']),
     ).all()
     return [(r.quality_type, r.event_time, r.quality_count) for r in rows]
+
+def get_efficiency_measurements_bulk(db: Session, device_id: int, start_datetime: datetime, end_datetime: datetime):
+    """指定期間の全稼働分類データを一括取得して (classification_group, classification_status_name, classification_status, event_time) のリストで返す"""
+    rows = db.query(
+        models.EfficiencyMeasurements.classification_group,
+        models.EfficiencyMeasurements.classification_status_name,
+        models.EfficiencyMeasurements.classification_status,
+        models.EfficiencyMeasurements.event_time,
+    ).filter(
+        models.EfficiencyMeasurements.device_id == device_id,
+        models.EfficiencyMeasurements.event_time >= start_datetime,
+        models.EfficiencyMeasurements.event_time < end_datetime,
+    ).order_by(
+        models.EfficiencyMeasurements.classification_group,
+        models.EfficiencyMeasurements.event_time,
+    ).all()
+    return [(r.classification_group, r.classification_status_name, r.classification_status, r.event_time) for r in rows]

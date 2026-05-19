@@ -137,7 +137,7 @@ const ExternalConnectorsPage: React.FC = () => {
 
   const formatLastSentAt = (value: string | null) => {
     if (!value) return SETTINGS_LABELS.CONNECTOR_NOT_SENT_YET;
-    return new Date(value).toLocaleString('ja-JP');
+    return new Date(value + 'Z').toLocaleString('ja-JP');
   };
 
   const getConnectorTypeLabel = (type: string) => {

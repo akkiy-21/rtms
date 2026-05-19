@@ -335,6 +335,7 @@ class DeviceConnector(Base):
     is_enabled = Column(Boolean, nullable=False, default=True)
     on_duplicate = Column(String(20), nullable=False, default='append')
     last_sent_at = Column(DateTime, nullable=True)
+    last_dispatched_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
 

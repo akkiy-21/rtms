@@ -91,7 +91,7 @@ const DeviceDetailSettingsPage: React.FC = () => {
     },
     {
       title: NAVIGATION_LABELS.EFFICIENCY_SETTINGS,
-      description: '効率計算のための設定',
+      description: '稼働分類のためのアドレス設定',
       icon: TrendingUp,
       path: `/devices/${deviceId}/detail-settings/efficiency-settings`,
       color: 'text-purple-500',
