@@ -59,6 +59,17 @@ def _build_request_body(connector_type: str, on_duplicate: str, records: list) -
             ],
             "on_duplicate": on_duplicate,
         }
+    if connector_type == "cycle_time_history":
+        return {
+            "records": [
+                {
+                    "applied_at": row[0],
+                    "standard_cycle_time": row[1],
+                }
+                for row in records
+            ],
+            "on_duplicate": on_duplicate,
+        }
     raise ValueError(f"Unknown connector_type: {connector_type}")
 
 
@@ -111,6 +122,13 @@ def send_connector_data(connector_id: int, manual: bool = False):
                 start_date=start_date,
                 end_date=end_date,
                 alarm_group_id=connector.alarm_group_id,
+            )
+        elif connector.connector_type == "cycle_time_history":
+            records = data_service.get_cycle_time_history(
+                db,
+                device_id=connector.device_id,
+                start_date=start_date,
+                end_date=end_date,
             )
         else:
             records = data_service.get_aggregated_data(

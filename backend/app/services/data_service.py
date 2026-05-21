@@ -312,9 +312,12 @@ def get_aggregated_data(db: Session, device_id: int, start_date: date, end_date:
     # タイムゾーンの設定
     tz = pytz.timezone('Asia/Tokyo')
 
-    # 集計範囲: start_date 00:00 〜 end_date 翌日 00:00
+    # 集計範囲: start_date 00:00 〜 end_date 翌日 00:00（ただし現在時刻を超えない）
     range_start = tz.localize(datetime.combine(start_date, datetime.min.time()))
     range_end = tz.localize(datetime.combine(end_date + timedelta(days=1), datetime.min.time()))
+    now_local = datetime.now(tz)
+    if range_end > now_local:
+        range_end = now_local
 
     # 一括クエリ: 対象期間の全レコードを取得
     records = data_crud.get_quality_counts_bulk(db, device_id, range_start, range_end)
@@ -343,5 +346,30 @@ def get_aggregated_data(db: Session, device_id: int, start_date: date, end_date:
         ])
 
         slot_start = slot_end
+
+    return results
+
+
+def get_cycle_time_history(db: Session, device_id: int, start_date: date, end_date: date):
+    """指定期間の基準サイクルタイム変更履歴を返す。
+    返却: [[applied_at_str, standard_cycle_time], ...]（JST文字列）
+    """
+    tz = pytz.timezone('Asia/Tokyo')
+
+    range_start = tz.localize(datetime.combine(start_date, datetime.min.time()))
+    range_end = tz.localize(datetime.combine(end_date + timedelta(days=1), datetime.min.time()))
+
+    rows = data_crud.get_cycle_time_history_bulk(db, device_id, range_start, range_end)
+
+    results = []
+    for applied_at, standard_cycle_time in rows:
+        if applied_at.tzinfo is None:
+            applied_at = tz.localize(applied_at)
+        else:
+            applied_at = applied_at.astimezone(tz)
+        results.append([
+            applied_at.strftime('%Y-%m-%d %H:%M:%S'),
+            standard_cycle_time,
+        ])
 
     return results

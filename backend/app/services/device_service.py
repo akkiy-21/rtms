@@ -3,6 +3,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session, joinedload
 from fastapi import HTTPException
 from typing import List, Optional
+from datetime import datetime
 import traceback
 
 from ..crud import device_crud, data_crud
@@ -54,11 +55,17 @@ def update_device(db: Session, device_id: int, device_update: DeviceUpdate) -> O
         # 古いMACアドレスを保存
         old_mac_address = old_device.mac_address
         old_device_status = old_device.device_status
-        
+        old_standard_cycle_time = old_device.standard_cycle_time
+
         updated_device_info = device_crud.update_device(db, device_id, device_update)
         if updated_device_info is None:
             return None
-        
+
+        # 基準サイクルタイムが変更された場合は履歴に記録する
+        new_cycle_time = device_update.standard_cycle_time
+        if new_cycle_time is not None and new_cycle_time != old_standard_cycle_time:
+            data_crud.record_cycle_time_change(db, device_id, new_cycle_time, datetime.utcnow())
+
         # DeviceOutモデルのインスタンスを作成
         updated_device = DeviceOut(**updated_device_info)
 

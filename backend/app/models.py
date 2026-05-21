@@ -156,6 +156,8 @@ class Devices(Base):
     alarm_measurements = relationship("AlarmMeasurements", back_populates="device", cascade="all, delete-orphan")
     efficiency_addresses = relationship("EfficiencyAddresses", back_populates="device", cascade="all, delete-orphan")
     action_job_items = relationship("DeviceActionJobItem", back_populates="device")
+    cycle_time_history = relationship("DeviceCycleTimeHistory", back_populates="device", cascade="all, delete-orphan",
+                                      order_by="DeviceCycleTimeHistory.applied_at")
 
     def __repr__(self):
         return f"<Device(id={self.id}, mac_address='{self.mac_address}', name='{self.name}')>"
@@ -363,6 +365,22 @@ class DeviceConnectorLog(Base):
     error_message = Column(Text, nullable=True)
 
     connector = relationship("DeviceConnector", back_populates="logs")
+
+
+class DeviceCycleTimeHistory(Base):
+    """基準サイクルタイム変更履歴"""
+    __tablename__ = 'device_cycle_time_history'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    device_id = Column(Integer, ForeignKey('devices.id', ondelete='CASCADE'), nullable=False)
+    standard_cycle_time = Column(Float, nullable=False)
+    applied_at = Column(DateTime, nullable=False)
+
+    device = relationship("Devices", back_populates="cycle_time_history")
+
+    __table_args__ = (
+        Index('ix_device_cycle_time_history_device_id_applied_at', 'device_id', 'applied_at'),
+    )
 
 
 class AlarmParseRule(Base):

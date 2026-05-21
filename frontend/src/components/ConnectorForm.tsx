@@ -97,6 +97,23 @@ const CONNECTOR_SCHEMAS: Record<string, { description: string; example: object; 
       { name: 'on_duplicate', type: 'string', description: '重複時の動作（append: 常に追加 / skip: 重複スキップ / upsert: 上書き更新）' },
     ],
   },
+  cycle_time_history: {
+    description: '基準サイクルタイムの変更履歴を配列で送信します。standard_cycle_timeが変更されるたびに1件記録されます。',
+    example: {
+      records: [
+        {
+          applied_at: '2026-05-18 08:00:00',
+          standard_cycle_time: 45.0,
+        },
+      ],
+      on_duplicate: 'upsert',
+    },
+    fields: [
+      { name: 'records[].applied_at', type: 'string', description: '基準CTが適用された日時（JST）' },
+      { name: 'records[].standard_cycle_time', type: 'number', description: '基準サイクルタイム（秒）' },
+      { name: 'on_duplicate', type: 'string', description: '重複時の動作（append: 常に追加 / skip: 重複スキップ / upsert: 上書き更新）' },
+    ],
+  },
 };
 
 const ConnectorTypeSchemaHelp: React.FC<{ connectorType: string }> = ({ connectorType }) => {

@@ -191,3 +191,32 @@ def get_alarm_measurements_bulk(
         (r.alarm_group_name, r.alarm_group_id, r.alarm_no, r.alarm_name, r.alarm_state, r.event_time)
         for r in rows
     ]
+
+
+def record_cycle_time_change(db: Session, device_id: int, standard_cycle_time: float, applied_at: datetime):
+    """基準サイクルタイムの変更を履歴テーブルに記録する。"""
+    record = models.DeviceCycleTimeHistory(
+        device_id=device_id,
+        standard_cycle_time=standard_cycle_time,
+        applied_at=applied_at,
+    )
+    db.add(record)
+    db.commit()
+    db.refresh(record)
+    return record
+
+
+def get_cycle_time_history_bulk(db: Session, device_id: int, start_datetime: datetime, end_datetime: datetime):
+    """指定期間の基準サイクルタイム変更履歴を一括取得して (applied_at, standard_cycle_time) のリストで返す。"""
+    rows = db.query(
+        models.DeviceCycleTimeHistory.applied_at,
+        models.DeviceCycleTimeHistory.standard_cycle_time,
+    ).filter(
+        models.DeviceCycleTimeHistory.device_id == device_id,
+        models.DeviceCycleTimeHistory.applied_at >= start_datetime,
+        models.DeviceCycleTimeHistory.applied_at < end_datetime,
+    ).order_by(
+        models.DeviceCycleTimeHistory.applied_at,
+    ).all()
+    return [(r.applied_at, r.standard_cycle_time) for r in rows]
+
