@@ -114,6 +114,7 @@ def send_connector_data(connector_id: int, manual: bool = False):
                 device_id=connector.device_id,
                 start_date=start_date,
                 end_date=end_date,
+                utc=True,
             )
         elif connector.connector_type == "alarm_data":
             records = data_service.get_alarm_state_intervals(
@@ -122,6 +123,7 @@ def send_connector_data(connector_id: int, manual: bool = False):
                 start_date=start_date,
                 end_date=end_date,
                 alarm_group_id=connector.alarm_group_id,
+                utc=True,
             )
         elif connector.connector_type == "cycle_time_history":
             records = data_service.get_cycle_time_history(
@@ -129,6 +131,7 @@ def send_connector_data(connector_id: int, manual: bool = False):
                 device_id=connector.device_id,
                 start_date=start_date,
                 end_date=end_date,
+                utc=True,
             )
         else:
             records = data_service.get_aggregated_data(
@@ -137,6 +140,7 @@ def send_connector_data(connector_id: int, manual: bool = False):
                 start_date=start_date,
                 end_date=end_date,
                 interval_minutes=connector.send_interval_minutes,
+                utc=True,
             )
 
         if not records:

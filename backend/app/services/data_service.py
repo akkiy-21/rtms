@@ -187,6 +187,7 @@ def get_alarm_state_intervals(
     start_date: date,
     end_date: date,
     alarm_group_id: int = None,
+    utc: bool = False,
 ):
     """アラームログの発生区間リストを返す。
     DBには状態変化時のみレコードが存在するため、true/false をペアにして区間を構築する。
@@ -211,6 +212,8 @@ def get_alarm_state_intervals(
     for alarm_group_name, ag_id, alarm_no, alarm_name, alarm_state, event_time in rows:
         groups[(alarm_group_name, ag_id, alarm_no, alarm_name)].append((alarm_state, event_time))
 
+    fmt = (lambda dt: dt.astimezone(pytz.utc).strftime('%Y-%m-%dT%H:%M:%SZ')) if utc else (lambda dt: dt.strftime('%Y-%m-%d %H:%M:%S'))
+
     results = []
     for (alarm_group_name, ag_id, alarm_no, alarm_name), events in groups.items():
         pending_start = None
@@ -227,8 +230,8 @@ def get_alarm_state_intervals(
                     alarm_group_name,
                     alarm_no,
                     alarm_name,
-                    pending_start.strftime('%Y-%m-%d %H:%M:%S'),
-                    event_time.strftime('%Y-%m-%d %H:%M:%S'),
+                    fmt(pending_start),
+                    fmt(event_time),
                 ])
                 pending_start = None
 
@@ -237,14 +240,14 @@ def get_alarm_state_intervals(
                 alarm_group_name,
                 alarm_no,
                 alarm_name,
-                pending_start.strftime('%Y-%m-%d %H:%M:%S'),
-                now_local.strftime('%Y-%m-%d %H:%M:%S'),
+                fmt(pending_start),
+                fmt(now_local),
             ])
 
     return results
 
 
-def get_efficiency_state_intervals(db: Session, device_id: int, start_date: date, end_date: date):
+def get_efficiency_state_intervals(db: Session, device_id: int, start_date: date, end_date: date, utc: bool = False):
     """稼働分類ログのON区間リストを返す。
     DBには状態変化時のみレコードが存在するため、各Trueレコードと次のFalseレコードをペアにして区間を構築する。
     送信時点でまだONの場合はended_atを現在時刻（仮締め）とする。
@@ -264,6 +267,8 @@ def get_efficiency_state_intervals(db: Session, device_id: int, start_date: date
     for group, status_name, status, event_time in rows:
         groups[group].append((status_name, status, event_time))
 
+    fmt = (lambda dt: dt.astimezone(pytz.utc).strftime('%Y-%m-%dT%H:%M:%SZ')) if utc else (lambda dt: dt.strftime('%Y-%m-%d %H:%M:%S'))
+
     results = []
     for group, events in groups.items():
         pending_start = None
@@ -280,8 +285,8 @@ def get_efficiency_state_intervals(db: Session, device_id: int, start_date: date
                 results.append([
                     group,
                     pending_name,
-                    pending_start.strftime('%Y-%m-%d %H:%M:%S'),
-                    event_time.strftime('%Y-%m-%d %H:%M:%S'),
+                    fmt(pending_start),
+                    fmt(event_time),
                 ])
                 pending_start = None
                 pending_name = None
@@ -289,8 +294,8 @@ def get_efficiency_state_intervals(db: Session, device_id: int, start_date: date
             results.append([
                 group,
                 pending_name,
-                pending_start.strftime('%Y-%m-%d %H:%M:%S'),
-                now_local.strftime('%Y-%m-%d %H:%M:%S'),
+                fmt(pending_start),
+                fmt(now_local),
             ])
 
     # 各区間の隙間を「停止ロス時間 / 停止中」で補完する。
@@ -308,7 +313,7 @@ def get_efficiency_state_intervals(db: Session, device_id: int, start_date: date
 
     return results
 
-def get_aggregated_data(db: Session, device_id: int, start_date: date, end_date: date, interval_minutes: int = 60):
+def get_aggregated_data(db: Session, device_id: int, start_date: date, end_date: date, interval_minutes: int = 60, utc: bool = False):
     # タイムゾーンの設定
     tz = pytz.timezone('Asia/Tokyo')
 
@@ -338,9 +343,10 @@ def get_aggregated_data(db: Session, device_id: int, start_date: date, end_date:
             if qtype == 'Ng' and slot_start <= etime < slot_end
         )
 
+        fmt = (lambda dt: dt.astimezone(pytz.utc).strftime('%Y-%m-%dT%H:%M:%SZ')) if utc else (lambda dt: dt.strftime('%Y-%m-%d %H:%M:%S'))
         results.append([
-            slot_start.strftime('%Y-%m-%d %H:%M:%S'),
-            slot_end.strftime('%Y-%m-%d %H:%M:%S'),
+            fmt(slot_start),
+            fmt(slot_end),
             int(good_qty),
             int(ng_qty)
         ])
@@ -350,7 +356,7 @@ def get_aggregated_data(db: Session, device_id: int, start_date: date, end_date:
     return results
 
 
-def get_cycle_time_history(db: Session, device_id: int, start_date: date, end_date: date):
+def get_cycle_time_history(db: Session, device_id: int, start_date: date, end_date: date, utc: bool = False):
     """指定期間の基準サイクルタイム変更履歴を返す。
     返却: [[applied_at_str, standard_cycle_time], ...]（JST文字列）
     """
@@ -361,6 +367,8 @@ def get_cycle_time_history(db: Session, device_id: int, start_date: date, end_da
 
     rows = data_crud.get_cycle_time_history_bulk(db, device_id, range_start, range_end)
 
+    fmt = (lambda dt: dt.astimezone(pytz.utc).strftime('%Y-%m-%dT%H:%M:%SZ')) if utc else (lambda dt: dt.strftime('%Y-%m-%d %H:%M:%S'))
+
     results = []
     for applied_at, standard_cycle_time in rows:
         if applied_at.tzinfo is None:
@@ -368,7 +376,7 @@ def get_cycle_time_history(db: Session, device_id: int, start_date: date, end_da
         else:
             applied_at = applied_at.astimezone(tz)
         results.append([
-            applied_at.strftime('%Y-%m-%d %H:%M:%S'),
+            fmt(applied_at),
             standard_cycle_time,
         ])
 
