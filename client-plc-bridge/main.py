@@ -472,6 +472,7 @@ class PLCBridge:
         self.previous_data = defaultdict(lambda: defaultdict(int))
         self.previous_trigger_states = defaultdict(lambda: defaultdict(bool))
         self.is_first_scan: dict = {}  # bridge_name -> bool: 起動後の初回スキャン判定
+        self.pending_efficiency_snapshot = defaultdict(dict)
         
         self.config_websocket = None
         self.data_websocket = None
@@ -785,6 +786,10 @@ class PLCBridge:
             
             self.plcs.clear()
             self.bridge_config = self.parse_config(new_config)
+            self.previous_data.clear()
+            self.previous_trigger_states.clear()
+            self.is_first_scan.clear()
+            self.pending_efficiency_snapshot.clear()
             
             # 新しいPLC接続の初期化
             self.initialize_plcs()
@@ -1264,30 +1269,39 @@ class PLCBridge:
             if current_value is not None:
                 # 初回スキャン: 現在の全状態をスナップショットとして送信
                 if not self.is_first_scan.get(data_name, False):
-                    self.is_first_scan[data_name] = True
-                    snapshot_message = {
-                        'timestamp': message.get('timestamp', int(time.time() * 1000)),
-                        'name': 'efficiency_snapshot',
-                        'data': {}
-                    }
+                    snapshot_payload = None
                     if isinstance(current_value, bool):
-                        snapshot_message['data'][bridge_data['class_name']] = {
+                        snapshot_payload = {
                             'state': current_value,
                             'name': raw_data_name
                         }
                     elif isinstance(current_value, (int, list)):
                         base_addr, bit_position = self.parse_bit_address(bridge_data['address'])
                         if bit_position is not None:
-                            current_bit_state = self.get_bit_state(current_value, bit_position)
-                            snapshot_message['data'][bridge_data['class_name']] = {
-                                'state': current_bit_state,
+                            snapshot_payload = {
+                                'state': self.get_bit_state(current_value, bit_position),
                                 'name': raw_data_name,
                                 'bit_position': bit_position,
                                 'raw_value': current_value[0] if isinstance(current_value, list) else current_value
                             }
-                    if snapshot_message['data']:
-                        await self.cast_data(snapshot_message)
-                        logger.debug(f"Efficiency snapshot sent for {data_name}")
+
+                    if snapshot_payload is not None:
+                        snapshot_cache = self.pending_efficiency_snapshot[data_name]
+                        snapshot_cache[bridge_data['class_name']] = snapshot_payload
+
+                        expected_efficiency_groups = len(self.bridge_config.get('efficiency_config', {}).get('groups', []))
+                        if expected_efficiency_groups > 0 and len(snapshot_cache) >= expected_efficiency_groups:
+                            self.is_first_scan[data_name] = True
+                            snapshot_message = {
+                                'timestamp': message.get('timestamp', int(time.time() * 1000)),
+                                'name': 'efficiency_snapshot',
+                                'data': dict(snapshot_cache)
+                            }
+                            await self.cast_data(snapshot_message)
+                            self.pending_efficiency_snapshot.pop(data_name, None)
+                            logger.debug(
+                                f"Efficiency snapshot sent for {data_name}: {len(snapshot_message['data'])} groups"
+                            )
 
                 previous_value = self.previous_data[data_name].get(raw_data_name, False)
 

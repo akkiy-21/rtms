@@ -11,3 +11,11 @@ body {
   width: 100%;
   height: 100%;
 }
+
+html.app-cursor-hidden,
+html.app-cursor-hidden body,
+html.app-cursor-hidden body *,
+body.app-cursor-hidden,
+body.app-cursor-hidden * {
+  cursor: none !important;
+}

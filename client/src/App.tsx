@@ -37,6 +37,22 @@ import { useDeviceSetup } from './hooks/useDeviceSetup';
 import { useDashboardPublisher } from './hooks/useDashboardPublisher';
 import { getCurrentTimeTableId as getCurrentTimeTableIdForNow } from './utils/timeTableUtils';
 
+const PENDING_OPERATION_STATUS: OperationStatus = { status: '判定中', category: '' };
+
+const resolveOperationStatus = (signalStates: { [key: string]: SignalState }): OperationStatus => {
+  let newStatus: OperationStatus = { status: '停止中', category: '停止ロス時間' };
+  let latestTrueSignal: SignalState | null = null;
+
+  for (const [category, signal] of Object.entries(signalStates)) {
+    if (signal.state && (!latestTrueSignal || signal.lastUpdated > latestTrueSignal.lastUpdated)) {
+      latestTrueSignal = signal;
+      newStatus = { status: signal.name, category };
+    }
+  }
+
+  return newStatus;
+};
+
 const AppContent: React.FC = () => {
   const { deviceId, setDeviceId } = useDevice();
   const { isScriptReady, setScriptReady } = useScript();
@@ -84,7 +100,7 @@ const AppContent: React.FC = () => {
   const currentStatus = useRef<string | null>(null);
   const deviceConfigRef = useRef<DeviceConfig | null>(null);
 
-  const [operationStatus, setOperationStatus] = useState<OperationStatus>({ status: "停止中", category: "停止ロス時間" });
+  const [operationStatus, setOperationStatus] = useState<OperationStatus>(PENDING_OPERATION_STATUS);
   const lastStatusChangeTime = useRef<number>(Date.now());
   useEffect(() => {
     const handleScriptReady = (ready: boolean) => {
@@ -319,18 +335,8 @@ const AppContent: React.FC = () => {
             lastUpdated: currentTime
           };
         }
-  
-        let newStatus: OperationStatus = { status: "停止中", category: "停止ロス時間" };
-        let latestTrueSignal: SignalState | null = null;
-  
-        for (const [category, signal] of Object.entries(newSignalStates)) {
-          if (signal.state) {
-            if (!latestTrueSignal || signal.lastUpdated > latestTrueSignal.lastUpdated) {
-              latestTrueSignal = signal;
-              newStatus = { status: signal.name, category };
-            }
-          }
-        }
+
+        const newStatus = resolveOperationStatus(newSignalStates);
   
         const elapsedTime = (currentTime - lastUpdateTime.current) / 1000;
   
@@ -411,17 +417,7 @@ const AppContent: React.FC = () => {
           };
         }
 
-        let newStatus: OperationStatus = { status: '停止中', category: '停止ロス時間' };
-        let latestTrueSignal: SignalState | null = null;
-
-        for (const [category, signal] of Object.entries(newSignalStates)) {
-          if (signal.state) {
-            if (!latestTrueSignal || signal.lastUpdated > latestTrueSignal.lastUpdated) {
-              latestTrueSignal = signal;
-              newStatus = { status: signal.name, category };
-            }
-          }
-        }
+        const newStatus = resolveOperationStatus(newSignalStates);
 
         setOperationStatus(newStatus);
         lastUpdateTime.current = currentTime;
@@ -463,39 +459,37 @@ const AppContent: React.FC = () => {
       const activeTimeTableId = resolveActiveTimeTableId();
 
       setCumulativeTimes(prevTimes => {
-        const newTimes = { ...prevTimes };
-        if (currentStatus.current) {
-          newTimes[currentStatus.current as keyof typeof newTimes] += timeDiff;
-        } else {
-          newTimes['停止ロス時間'] += timeDiff;
+        if (!currentStatus.current) {
+          return prevTimes;
         }
+
+        const newTimes = { ...prevTimes };
+        newTimes[currentStatus.current as keyof typeof newTimes] += timeDiff;
         return newTimes;
       });
 
-      if (activeTimeTableId !== null) {
+      if (activeTimeTableId !== null && currentStatus.current) {
         setTimeTableData(prevData => {
           const currentTable = prevData[activeTimeTableId] || createEmptyTimeTableData(now);
           const updatedTable = { ...currentTable };
-          if (currentStatus.current) {
-            switch (currentStatus.current) {
-              case '操業時間':
-                updatedTable.operationTime += timeDiff;
-                break;
-              case '性能ロス時間':
-                updatedTable.performanceLossTime += timeDiff;
-                break;
-              case '停止ロス時間':
-                updatedTable.stopLossTime += timeDiff;
-                break;
-              case '計画停止時間':
-                updatedTable.plannedStopTime += timeDiff;
-                break;
-              default:
-                updatedTable.stopLossTime += timeDiff;
-            }
-          } else {
-            updatedTable.stopLossTime += timeDiff;
+
+          switch (currentStatus.current) {
+            case '操業時間':
+              updatedTable.operationTime += timeDiff;
+              break;
+            case '性能ロス時間':
+              updatedTable.performanceLossTime += timeDiff;
+              break;
+            case '停止ロス時間':
+              updatedTable.stopLossTime += timeDiff;
+              break;
+            case '計画停止時間':
+              updatedTable.plannedStopTime += timeDiff;
+              break;
+            default:
+              updatedTable.stopLossTime += timeDiff;
           }
+
           updatedTable.lastUpdateTime = now;
           return { ...prevData, [activeTimeTableId]: updatedTable };
         });

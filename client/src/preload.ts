@@ -126,15 +126,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
       ipcRenderer.removeListener(channel, callback);
     }
   },
-  
-  // カーソル関連
-  onShowCursor: (callback: () => void) => {
-    ipcRenderer.on('show-cursor', () => callback());
-  },
-  onHideCursor: (callback: () => void) => {
-    ipcRenderer.on('hide-cursor', () => callback());
-  },
-  resetCursorTimer: () => ipcRenderer.send('reset-cursor-timer'),
 
   // 一般的なInvoke
   invoke: (channel: string, ...args: any[]) => ipcRenderer.invoke(channel, ...args),

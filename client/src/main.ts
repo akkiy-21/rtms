@@ -73,7 +73,6 @@ let bridgeRestartAttempts = 0;
 const MAX_BRIDGE_RESTARTS = 5;
 
 const MESSAGE_TIMEOUT = 5000; // 5秒
-const CURSOR_HIDE_TIMEOUT = 5000; // 5秒 (カーソル非表示までの時間)
 
 // ブリッジスクリプトを再起動するグローバル関数
 const restartBridgeScript = () => {
@@ -218,27 +217,12 @@ const createWindow = () => {
   // DevToolsを開く（開発時のみ）
   //mainWindow.webContents.openDevTools();
 
-  // カーソル非表示機能の追加
-  let cursorTimeout: NodeJS.Timeout | null = null;
-
-  const resetCursorTimer = () => {
-    if (cursorTimeout) {
-      clearTimeout(cursorTimeout);
-    }
-    mainWindow?.webContents.send('show-cursor');
-    cursorTimeout = setTimeout(() => {
-      mainWindow?.webContents.send('hide-cursor');
-    }, CURSOR_HIDE_TIMEOUT);
-  };
-
   // ウィンドウの準備が完了してから初期化処理を実行
   mainWindow.webContents.on('did-finish-load', () => {
     // フルスクリーンモードに設定
     //if (mainWindow) {
     //  mainWindow.setFullScreen(true);
     //}
-
-    resetCursorTimer();
 
     // レンダラーが完全に読み込まれてから、ブリッジとWebSocketを初期化
     const win = mainWindow;
@@ -944,16 +928,6 @@ ipcMain.handle('get-all-mac-addresses', getAllMacAddresses);
 // サーバーへのルートを取得する新しいハンドラ
 ipcMain.handle('get-route-to-server', async (_, serverIP: string): Promise<string | null> => {
   return await getRouteToServer(serverIP);
-});
-
-//
-ipcMain.on('reset-cursor-timer', () => {
-  if (mainWindow) {
-    mainWindow.webContents.send('show-cursor');
-    setTimeout(() => {
-      mainWindow?.webContents.send('hide-cursor');
-    }, CURSOR_HIDE_TIMEOUT);
-  }
 });
 
 // ElectronStore用のIPCハンドラを追加

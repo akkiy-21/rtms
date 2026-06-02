@@ -1,5 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+const CURSOR_HIDDEN_CLASS = 'app-cursor-hidden';
+const INTERACTION_EVENTS: Array<keyof WindowEventMap> = [
+  'pointermove',
+  'pointerdown',
+  'touchstart',
+  'mousemove',
+  'mousedown',
+  'wheel',
+  'keydown'
+];
+
 /**
  * Hides the mouse cursor after a period of inactivity and brings it back on interaction.
  * @param timeoutMs - Milliseconds of inactivity before cursor is hidden (default: 5000)
@@ -9,17 +20,25 @@ export const useCursorVisibility = (timeoutMs = 5000, isDialogOpen = false) => {
   const [isCursorVisible, setIsCursorVisible] = useState(true);
   const cursorTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  const applyCursorClass = useCallback((hidden: boolean) => {
+    if (typeof document === 'undefined') return;
+
+    document.documentElement.classList.toggle(CURSOR_HIDDEN_CLASS, hidden);
+    document.body.classList.toggle(CURSOR_HIDDEN_CLASS, hidden);
+    document.body.style.cursor = hidden ? 'none' : '';
+  }, []);
+
   const hideCursor = useCallback(() => {
     if (typeof document === 'undefined') return;
     setIsCursorVisible(false);
-    document.body.style.cursor = 'none';
-  }, []);
+    applyCursorClass(true);
+  }, [applyCursorClass]);
 
   const showCursor = useCallback(() => {
     if (typeof document === 'undefined') return;
     setIsCursorVisible(true);
-    document.body.style.cursor = 'default';
-  }, []);
+    applyCursorClass(false);
+  }, [applyCursorClass]);
 
   const resetCursorTimer = useCallback(() => {
     if (cursorTimeoutRef.current) {
@@ -43,22 +62,28 @@ export const useCursorVisibility = (timeoutMs = 5000, isDialogOpen = false) => {
       showCursor();
     } else {
       // ダイアログが閉じたらタイマーを再開
-      cursorTimeoutRef.current = setTimeout(hideCursor, timeoutMs);
+      resetCursorTimer();
     }
-  }, [isDialogOpen, hideCursor, showCursor, timeoutMs]);
+  }, [isDialogOpen, hideCursor, resetCursorTimer, showCursor, timeoutMs]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    window.addEventListener('mousemove', resetCursorTimer);
-    window.addEventListener('mousedown', resetCursorTimer);
+    resetCursorTimer();
+
+    for (const eventName of INTERACTION_EVENTS) {
+      window.addEventListener(eventName, resetCursorTimer, { passive: true });
+    }
 
     return () => {
-      window.removeEventListener('mousemove', resetCursorTimer);
-      window.removeEventListener('mousedown', resetCursorTimer);
+      for (const eventName of INTERACTION_EVENTS) {
+        window.removeEventListener(eventName, resetCursorTimer);
+      }
+
       if (cursorTimeoutRef.current) {
         clearTimeout(cursorTimeoutRef.current);
       }
+
       showCursor();
     };
   }, [resetCursorTimer, showCursor]);
