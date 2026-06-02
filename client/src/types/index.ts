@@ -1,4 +1,5 @@
 // types/index.ts
+/* eslint-disable @typescript-eslint/no-explicit-any */
 export interface DeviceConfig {
     id: number;
     mac_address: string;
@@ -132,4 +133,5 @@ export interface NetworkSettings {
   // 無線の場合
   ssid?: string;          // SSID（手動入力）
   wifiPassword?: string;  // WiFiパスワード
+  type?: 'wireless' | 'wired'; // アダプタの種類（main.ts側で判定に使用）
 }

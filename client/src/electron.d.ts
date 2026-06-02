@@ -1,4 +1,5 @@
 // electron.d.ts
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Systeminformation } from 'systeminformation';
 import { NetworkAdapter, NetworkSettings } from './types';
 

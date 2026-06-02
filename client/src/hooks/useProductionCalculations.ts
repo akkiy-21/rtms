@@ -35,7 +35,7 @@ export const useProductionCalculations = (
   currentTimeTableId: number | null,
   timeTableData: { [key: number]: TimeTableData },
   deviceConfig: DeviceConfig | null,
-  cumulativeTimes: { [key: string]: number }
+  _cumulativeTimes: { [key: string]: number }
 ): ProductionCalculations => {
   const [hourlyProduction, setHourlyProduction] = useState(0);
   const [hourlyEfficiency, setHourlyEfficiency] = useState(0);

@@ -24,14 +24,13 @@ import {
   TimeTableData, 
   EfficiencyData, 
   SignalState, 
-  OperationStatus, 
-  TimeMeasurement 
+  OperationStatus
 } from './types';
 import ErrorDialog from './components/ErrorDialog';
 import MqttStatusDialog from './components/MqttStatusDialog';
 import { useProductionCalculations } from './hooks/useProductionCalculations';
 import { useDevice } from './contexts/DeviceContext';
-import { ScriptProvider, useScript } from './contexts/ScriptContext';
+import { useScript } from './contexts/ScriptContext';
 import { useWebSocket } from './hooks/useWebSocket';
 import { useCursorVisibility } from './hooks/useCursorVisibility';
 import { useDeviceSetup } from './hooks/useDeviceSetup';
@@ -39,7 +38,6 @@ import { useDashboardPublisher } from './hooks/useDashboardPublisher';
 import { getCurrentTimeTableId as getCurrentTimeTableIdForNow } from './utils/timeTableUtils';
 
 const AppContent: React.FC = () => {
-  useCursorVisibility();
   const { deviceId, setDeviceId } = useDevice();
   const { isScriptReady, setScriptReady } = useScript();
   const { 
@@ -80,7 +78,7 @@ const AppContent: React.FC = () => {
     計画停止時間: 0
   });
 
-  const [signalStates, setSignalStates] = useState<{ [key: string]: SignalState }>({});
+  const [, setSignalStates] = useState<{ [key: string]: SignalState }>({});
 
   const lastUpdateTime = useRef<number>(Date.now());
   const currentStatus = useRef<string | null>(null);
@@ -88,13 +86,6 @@ const AppContent: React.FC = () => {
 
   const [operationStatus, setOperationStatus] = useState<OperationStatus>({ status: "停止中", category: "停止ロス時間" });
   const lastStatusChangeTime = useRef<number>(Date.now());
-  const [timeMeasurement, setTimeMeasurement] = useState<TimeMeasurement>({
-    '操業時間': 0,
-    '性能ロス時間': 0,
-    '停止ロス時間': 0,
-    '計画停止時間': 0
-  });
-
   useEffect(() => {
     const handleScriptReady = (ready: boolean) => {
       console.log('🔔 script-ready イベント受信:', ready);
@@ -151,8 +142,6 @@ const AppContent: React.FC = () => {
     connectionError,
     setConnectionError,
     selectedMac,
-    setSelectedMac,
-    macAddresses,
     mqttError,
     pairingStatus,
     pairingCode,
@@ -168,6 +157,10 @@ const AppContent: React.FC = () => {
     isConfigConnected,
     isScriptReady,
   });
+
+  // ダイアログが1つでも開いている間はカーソルを常時表示する
+  const isAnyDialogOpen = isLoading || openSettings || mqttStatusDialogOpen || connectionError !== null || (errorType !== null && errorType !== 'high-scan-time');
+  useCursorVisibility(5000, isAnyDialogOpen);
 
   useEffect(() => {
     deviceConfigRef.current = deviceConfig;
@@ -212,12 +205,8 @@ const AppContent: React.FC = () => {
     dailyEfficiency,
     hourlyAvgCycleTime,
     dailyAvgCycleTime,
-    totalProduction,
-    goodRate,
     hourlyNg,
     dailyNg,
-    hourlyStats,
-    dailyStats
   } = useProductionCalculations(
     timeTables,
     currentTimeTableId,
@@ -285,6 +274,7 @@ const AppContent: React.FC = () => {
     return window.electronAPI.onUpdateErrorStatus(handleErrorStatus);
   }, []);
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleDataUpdate = useCallback((data: any) => {
     if (data.name === 'quality_control' && data.data) {
       const activeTimeTableId = resolveActiveTimeTableId();
@@ -406,6 +396,38 @@ const AppContent: React.FC = () => {
           elapsedTime
         });
   
+        return newSignalStates;
+      });
+    } else if (data.name === 'efficiency_snapshot' && data.data) {
+      // 初回スキャン時の全信号スナップショットを反映し、起動直後の表示を実状態に合わせる
+      const currentTime = Date.now();
+      setSignalStates(prevStates => {
+        const newSignalStates = { ...prevStates };
+        for (const [category, value] of Object.entries(data.data as EfficiencyData)) {
+          newSignalStates[category] = {
+            state: value.state,
+            name: value.name,
+            lastUpdated: currentTime
+          };
+        }
+
+        let newStatus: OperationStatus = { status: '停止中', category: '停止ロス時間' };
+        let latestTrueSignal: SignalState | null = null;
+
+        for (const [category, signal] of Object.entries(newSignalStates)) {
+          if (signal.state) {
+            if (!latestTrueSignal || signal.lastUpdated > latestTrueSignal.lastUpdated) {
+              latestTrueSignal = signal;
+              newStatus = { status: signal.name, category };
+            }
+          }
+        }
+
+        setOperationStatus(newStatus);
+        lastUpdateTime.current = currentTime;
+        currentStatus.current = newStatus.category;
+
+        console.log('Efficiency snapshot applied:', { newStatus, signals: Object.keys(newSignalStates) });
         return newSignalStates;
       });
     }

@@ -1,5 +1,4 @@
 // services/api.ts
-import axios, { AxiosError } from 'axios';
 import { DeviceConfig, TimeTable, DeviceInfo, PairingCodeResponse, SelectedAdapter } from '../types';
 
 export class DeviceNotFoundError extends Error {
@@ -27,7 +26,7 @@ export const checkServerHealth = async (
     // メインプロセス経由でサーバーヘルスチェックを実行
     const isHealthy = await window.electronAPI.checkServerHealth(serverAddress, serverPort);
     return isHealthy;
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error(`サーバーヘルスチェックエラー:`, error);
     return false;
   }
@@ -35,6 +34,7 @@ export const checkServerHealth = async (
 
 // Find best network adapter that can connect to server
 export const findBestAdapter = async (
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   adapters: any[],
   serverAddress: string,
   serverPort: string

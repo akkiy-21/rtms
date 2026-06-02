@@ -21,6 +21,7 @@ export class WebSocketManager {
   private readonly MAX_SCAN_TIME = 1000;
 
   private isConfigConnected = false;
+  private isAllWsConnected = false;
 
   constructor(private mainWindow: BrowserWindow | null, private mqttManager: MqttManager) {}
 
@@ -31,7 +32,7 @@ export class WebSocketManager {
     this.updateConnectionStatus();
   }
 
-  private safeWindowSend(channel: string, data: any) {
+  private safeWindowSend(channel: string, data: unknown) {
     if (this.mainWindow && !this.mainWindow.isDestroyed()) {
       this.mainWindow.webContents.send(channel, data);
     }
@@ -46,12 +47,13 @@ export class WebSocketManager {
 
   private connect(type: string, url: string) {
     try {
-      this.connections[type] = new WebSocket(url);
+      const ws = new WebSocket(url);
+      this.connections[type] = ws;
 
-      this.connections[type]!.on('open', () => this.handleOpen(type));
-      this.connections[type]!.on('message', (data) => this.handleMessage(type, data));
-      this.connections[type]!.on('error', (error) => this.handleError(type, error));
-      this.connections[type]!.on('close', () => this.handleClose(type));
+      ws.on('open', () => this.handleOpen(type));
+      ws.on('message', (data) => this.handleMessage(type, data));
+      ws.on('error', (error) => this.handleError(type, error));
+      ws.on('close', () => this.handleClose(type));
     } catch (error) {
       console.error(`Error connecting to ${type} WebSocket:`, error);
       this.handleError(type, error as Error);
@@ -60,6 +62,10 @@ export class WebSocketManager {
 
   isConnected(type: string): boolean {
     return this.connections[type]?.readyState === WebSocket.OPEN;
+  }
+
+  getAllConnected(): boolean {
+    return this.isAllWsConnected;
   }
 
   private handleOpen(type: string) {
@@ -76,6 +82,7 @@ export class WebSocketManager {
       (conn) => conn?.readyState === WebSocket.OPEN
     );
     if (allConnected) {
+      this.isAllWsConnected = true;
       console.log('すべてのWebSocketが接続されました - ブリッジスクリプト準備完了');
       this.safeWindowSend('script-ready', true);
     }
@@ -83,6 +90,7 @@ export class WebSocketManager {
 
   private handleClose(type: string) {
     console.log(`${type} WebSocket connection closed`);
+    this.isAllWsConnected = false;
     this.attemptReconnect(type);
     this.updateConnectionStatus();
   }
@@ -106,9 +114,9 @@ export class WebSocketManager {
     }
   }
 
-  private handleScanTimeMessage(data: any) {
+  private handleScanTimeMessage(data: Record<string, unknown>) {
     if (data.scan_time) {
-      const scanTime = parseFloat(data.scan_time) * 1000;
+      const scanTime = parseFloat(data.scan_time as string) * 1000;
       this.safeWindowSend('update-scan-time', scanTime);
       
       if (scanTime > this.MAX_SCAN_TIME) {
@@ -119,7 +127,7 @@ export class WebSocketManager {
     }
   }
 
-  private handleConfigMessage(data: any) {
+  private handleConfigMessage(data: unknown) {
     console.log('Received config data:', data);
     this.safeWindowSend('update-config', data);
   }
@@ -169,7 +177,7 @@ export class WebSocketManager {
     }
   }
 
-  sendConfigWebSocket(config: any): Promise<{ status: string; message: string }> {
+  sendConfigWebSocket(config: unknown): Promise<{ status: string; message: string }> {
     return new Promise((resolve, reject) => {
       if (this.isConfigConnected && this.connections.config && this.connections.config.readyState === WebSocket.OPEN) {
         const timeoutId = setTimeout(() => {
@@ -178,7 +186,7 @@ export class WebSocketManager {
   
         const handleResponse = (data: WebSocket.Data) => {
           clearTimeout(timeoutId);
-          this.connections.config!.removeListener('message', handleResponse);
+          this.connections.config?.removeListener('message', handleResponse);
           try {
             const response = JSON.parse(data.toString());
             resolve(response);

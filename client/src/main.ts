@@ -1,4 +1,5 @@
 // src/main.ts
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { app, BrowserWindow, Menu, ipcMain } from 'electron';
 import electronSquirrelStartup from 'electron-squirrel-startup';
 import type { Systeminformation } from 'systeminformation';
@@ -240,12 +241,14 @@ const createWindow = () => {
     resetCursorTimer();
 
     // レンダラーが完全に読み込まれてから、ブリッジとWebSocketを初期化
+    const win = mainWindow;
+    if (!win) return;
 
     // MQTT Managerを初期化
-    mqttManager = createMqttManager(mainWindow!);
+    mqttManager = createMqttManager(win);
 
     // WebSocket Managerを初期化 (MQTT Managerを渡す)
-    webSocketManager = createWebSocketManager(mainWindow!, mqttManager);
+    webSocketManager = createWebSocketManager(win, mqttManager);
 
     // PLC-Bridgeスクリプトを起動（内部でWebSocket接続も開始される）
     runBridgeScript();
@@ -1080,7 +1083,7 @@ ipcMain.handle('update-mqtt-manager-mac', async (_, macAddress: string) => {
 });
 
 // MqttManagerの初期化を関数化
-const initializeMqttManager = () => {
+const _initializeMqttManager = () => {
   if (mainWindow && mqttManager) {
     const mqttBrokerIP = store.get('mqttBrokerIP') as string;
     const mqttBrokerPort = store.get('mqttBrokerPort') as string;

@@ -166,8 +166,9 @@ export class MqttManager {
       `${this.macAddress}/config`
     ];
 
+    const client = this.client;
     topics.forEach(topic => {
-      this.client!.subscribe(topic, { qos: 1 }, (err) => {
+      client.subscribe(topic, { qos: 1 }, (err) => {
         if (err) {
           console.error(`トピック${topic}の購読に失敗しました:`, err);
           this.mainWindow?.webContents.send('mqtt-status', 'subscription-error');
@@ -267,7 +268,7 @@ export class MqttManager {
     }
   }
 
-  public publishDashboardInfo(info: any): void {
+  public publishDashboardInfo(info: unknown): void {
     try {
       this.publish('dashboard', JSON.stringify(info), 1);
     } catch (error) {
@@ -292,6 +293,7 @@ export class MqttManager {
     
     if (this.macAddress !== newMacAddress) {
       if (this.client?.connected) {
+        const client = this.client;
         const oldTopics = [
           `${this.macAddress}/update`,
           `${this.macAddress}/command`,
@@ -299,7 +301,7 @@ export class MqttManager {
         ];
         
         oldTopics.forEach(topic => {
-          this.client!.unsubscribe(topic, (err) => {
+          client.unsubscribe(topic, (err) => {
             if (err) {
               console.error(`古いトピック${topic}からのunsubscribeに失敗しました:`, err);
             } else {

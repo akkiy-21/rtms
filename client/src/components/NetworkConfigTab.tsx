@@ -120,8 +120,8 @@ const NetworkConfigTab: React.FC<NetworkConfigTabProps> = ({ onApplySettings }) 
           setSsid(firstAdapter.ssid);
         }
       }
-    } catch (err: any) {
-      setError(`アダプタ一覧の取得に失敗しました: ${err.message}`);
+    } catch (err: unknown) {
+      setError(`アダプタ一覧の取得に失敗しました: ${(err as Error).message}`);
     } finally {
       setLoading(false);
     }
@@ -199,7 +199,7 @@ const NetworkConfigTab: React.FC<NetworkConfigTabProps> = ({ onApplySettings }) 
     };
 
     // 型情報をsettingsに追加（main.ts側で判定に使用）
-    (settings as any).type = currentAdapter.type;
+    settings.type = currentAdapter.type;
 
     try {
       const result = await window.electronAPI.applyNetworkSettings(settings);
@@ -212,8 +212,8 @@ const NetworkConfigTab: React.FC<NetworkConfigTabProps> = ({ onApplySettings }) 
       } else {
         setError(result.message);
       }
-    } catch (err: any) {
-      setError(`設定の適用に失敗しました: ${err.message}`);
+    } catch (err: unknown) {
+      setError(`設定の適用に失敗しました: ${(err as Error).message}`);
     } finally {
       setLoading(false);
     }

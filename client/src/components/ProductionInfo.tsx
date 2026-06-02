@@ -15,10 +15,10 @@ interface ProductionInfoProps {
 
 const ProductionInfo: React.FC<ProductionInfoProps> = ({ 
   deviceConfig, 
-  hourlyProduction,
-  hourlyEfficiency,
-  dailyProduction,
-  dailyEfficiency,
+  _hourlyProduction,
+  _hourlyEfficiency,
+  _dailyProduction,
+  _dailyEfficiency,
   hourlyAvgCycleTime,
   dailyAvgCycleTime,
 }) => {
