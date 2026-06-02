@@ -1265,6 +1265,7 @@ class PLCBridge:
             data_name = bridge_name
             raw_data_name = bridge_data['name']
             current_value = data.get(raw_data_name)
+            has_previous_value = raw_data_name in self.previous_data[data_name]
 
             if current_value is not None:
                 # 初回スキャン: 現在の全状態をスナップショットとして送信
@@ -1306,12 +1307,12 @@ class PLCBridge:
                 previous_value = self.previous_data[data_name].get(raw_data_name, False)
 
                 if isinstance(current_value, bool):
-                    if current_value != previous_value:
+                    if not has_previous_value or current_value != previous_value:
                         message['data'][bridge_data['class_name']] = {
                             'state': current_value,
                             'name': raw_data_name
                         }
-                        logger.debug(f"Efficiency boolean state changed for {raw_data_name}")
+                        logger.debug(f"Efficiency boolean state emitted for {raw_data_name}")
                 elif isinstance(current_value, (int, list)):
                     base_addr, bit_position = self.parse_bit_address(bridge_data['address'])
                     
@@ -1319,14 +1320,14 @@ class PLCBridge:
                         current_bit_state = self.get_bit_state(current_value, bit_position)
                         previous_bit_state = self.get_bit_state(previous_value, bit_position)
                         
-                        if current_bit_state != previous_bit_state:
+                        if not has_previous_value or current_bit_state != previous_bit_state:
                             message['data'][bridge_data['class_name']] = {
                                 'state': current_bit_state,
                                 'name': raw_data_name,
                                 'bit_position': bit_position,
                                 'raw_value': current_value[0] if isinstance(current_value, list) else current_value
                             }
-                            logger.debug(f"Efficiency bit state changed for {raw_data_name}")
+                            logger.debug(f"Efficiency bit state emitted for {raw_data_name}")
                 else:
                     logger.warning(f"Unexpected data type for {data_name}: {type(current_value)}")
 
