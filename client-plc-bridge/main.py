@@ -473,6 +473,7 @@ class PLCBridge:
         self.previous_trigger_states = defaultdict(lambda: defaultdict(bool))
         self.is_first_scan: dict = {}  # bridge_name -> bool: 起動後の初回スキャン判定
         self.pending_efficiency_snapshot = defaultdict(dict)
+        self.pending_initial_state: dict = {}  # WebSocket接続前の初回スキャン状態キャッシュ
         
         self.config_websocket = None
         self.data_websocket = None
@@ -620,6 +621,22 @@ class PLCBridge:
         async def data_handler(ws):
             self.data_websocket = ws
             try:
+                # 接続直後にキャッシュ済みの初期状態を送信（起動時の接続前スキャン分）
+                if self.pending_initial_state:
+                    initial_message = {
+                        'timestamp': int(time.time() * 1000),
+                        'name': 'efficiency_client_initial',
+                        'data': dict(self.pending_initial_state)
+                    }
+                    try:
+                        await ws.send(json.dumps(initial_message, ensure_ascii=False))
+                        logger.debug(
+                            f"Sent cached initial efficiency state on WS connect: "
+                            f"{len(self.pending_initial_state)} groups"
+                        )
+                    except Exception as e:
+                        logger.warning(f"Failed to send cached initial state: {e}")
+
                 await ws.wait_closed()
             finally:
                 if self.data_websocket == ws:
@@ -790,6 +807,7 @@ class PLCBridge:
             self.previous_trigger_states.clear()
             self.is_first_scan.clear()
             self.pending_efficiency_snapshot.clear()
+            self.pending_initial_state.clear()
             
             # 新しいPLC接続の初期化
             self.initialize_plcs()
@@ -1317,13 +1335,15 @@ class PLCBridge:
                     }
 
                     if not has_previous_value:
-                        await self.cast_data({
-                            'timestamp': message.get('timestamp', int(time.time() * 1000)),
-                            'name': 'efficiency_client_initial',
-                            'data': {
-                                bridge_data['class_name']: current_payload
-                            }
-                        })
+                        self.pending_initial_state[bridge_data['class_name']] = current_payload
+                        if self.data_websocket:
+                            await self.cast_data({
+                                'timestamp': message.get('timestamp', int(time.time() * 1000)),
+                                'name': 'efficiency_client_initial',
+                                'data': {
+                                    bridge_data['class_name']: current_payload
+                                }
+                            })
 
                     if current_value != previous_value:
                         message['data'][bridge_data['class_name']] = current_payload
@@ -1342,13 +1362,15 @@ class PLCBridge:
                         }
                         
                         if not has_previous_value:
-                            await self.cast_data({
-                                'timestamp': message.get('timestamp', int(time.time() * 1000)),
-                                'name': 'efficiency_client_initial',
-                                'data': {
-                                    bridge_data['class_name']: current_payload
-                                }
-                            })
+                            self.pending_initial_state[bridge_data['class_name']] = current_payload
+                            if self.data_websocket:
+                                await self.cast_data({
+                                    'timestamp': message.get('timestamp', int(time.time() * 1000)),
+                                    'name': 'efficiency_client_initial',
+                                    'data': {
+                                        bridge_data['class_name']: current_payload
+                                    }
+                                })
 
                         if current_bit_state != previous_bit_state:
                             message['data'][bridge_data['class_name']] = current_payload
