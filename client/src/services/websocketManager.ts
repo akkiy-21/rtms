@@ -137,7 +137,9 @@ export class WebSocketManager {
     this.safeWindowSend('update-data', data);
 
     // MQTTで送信（MqttManagerに委譲）
-    this.mqttManager.publishBridgeData(data);
+    if (data.name !== 'efficiency_client_initial') {
+      this.mqttManager.publishBridgeData(data);
+    }
   }
 
   private handleError(type: string, error: Error) {

@@ -1290,7 +1290,11 @@ class PLCBridge:
                         snapshot_cache = self.pending_efficiency_snapshot[data_name]
                         snapshot_cache[bridge_data['class_name']] = snapshot_payload
 
-                        expected_efficiency_groups = len(self.bridge_config.get('efficiency_config', {}).get('groups', []))
+                        expected_efficiency_groups = len({
+                            group['bridge_data']['class_name']
+                            for group in self.bridge_config.get('efficiency_config', {}).get('groups', [])
+                            if group is not None and group.get('bridge_data', {}).get('class_name')
+                        })
                         if expected_efficiency_groups > 0 and len(snapshot_cache) >= expected_efficiency_groups:
                             self.is_first_scan[data_name] = True
                             snapshot_message = {
@@ -1307,27 +1311,48 @@ class PLCBridge:
                 previous_value = self.previous_data[data_name].get(raw_data_name, False)
 
                 if isinstance(current_value, bool):
-                    if not has_previous_value or current_value != previous_value:
-                        message['data'][bridge_data['class_name']] = {
-                            'state': current_value,
-                            'name': raw_data_name
-                        }
-                        logger.debug(f"Efficiency boolean state emitted for {raw_data_name}")
+                    current_payload = {
+                        'state': current_value,
+                        'name': raw_data_name
+                    }
+
+                    if not has_previous_value:
+                        await self.cast_data({
+                            'timestamp': message.get('timestamp', int(time.time() * 1000)),
+                            'name': 'efficiency_client_initial',
+                            'data': {
+                                bridge_data['class_name']: current_payload
+                            }
+                        })
+
+                    if current_value != previous_value:
+                        message['data'][bridge_data['class_name']] = current_payload
+                        logger.debug(f"Efficiency boolean state changed for {raw_data_name}")
                 elif isinstance(current_value, (int, list)):
                     base_addr, bit_position = self.parse_bit_address(bridge_data['address'])
                     
                     if bit_position is not None:
                         current_bit_state = self.get_bit_state(current_value, bit_position)
                         previous_bit_state = self.get_bit_state(previous_value, bit_position)
+                        current_payload = {
+                            'state': current_bit_state,
+                            'name': raw_data_name,
+                            'bit_position': bit_position,
+                            'raw_value': current_value[0] if isinstance(current_value, list) else current_value
+                        }
                         
-                        if not has_previous_value or current_bit_state != previous_bit_state:
-                            message['data'][bridge_data['class_name']] = {
-                                'state': current_bit_state,
-                                'name': raw_data_name,
-                                'bit_position': bit_position,
-                                'raw_value': current_value[0] if isinstance(current_value, list) else current_value
-                            }
-                            logger.debug(f"Efficiency bit state emitted for {raw_data_name}")
+                        if not has_previous_value:
+                            await self.cast_data({
+                                'timestamp': message.get('timestamp', int(time.time() * 1000)),
+                                'name': 'efficiency_client_initial',
+                                'data': {
+                                    bridge_data['class_name']: current_payload
+                                }
+                            })
+
+                        if current_bit_state != previous_bit_state:
+                            message['data'][bridge_data['class_name']] = current_payload
+                            logger.debug(f"Efficiency bit state changed for {raw_data_name}")
                 else:
                     logger.warning(f"Unexpected data type for {data_name}: {type(current_value)}")
 

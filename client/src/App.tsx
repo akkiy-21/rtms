@@ -322,7 +322,7 @@ const AppContent: React.FC = () => {
   
         return prevData;
       });
-    } else if (data.name === 'efficiency' && data.data) {
+    } else if ((data.name === 'efficiency' || data.name === 'efficiency_client_initial') && data.data) {
       const currentTime = Date.now();
       const activeTimeTableId = resolveActiveTimeTableId();
       
