@@ -18,7 +18,6 @@ interface HeaderProps {
 
 const Header: React.FC<HeaderProps> = ({
   onOpenSettings,
-  _deviceConfig,
   selectedMac,
   scanTime,
   mqttError = false,
