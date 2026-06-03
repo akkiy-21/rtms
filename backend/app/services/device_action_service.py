@@ -125,13 +125,15 @@ def create_deploy_job(db: Session, requested_by: str, payload: DeviceDeployJobRe
     return get_device_action_job(db, job.id)
 
 
-def list_device_action_jobs(db: Session) -> list[DeviceActionJob]:
-    return (
+def list_device_action_jobs(db: Session, skip: int = 0, limit: int = 20) -> tuple[int, list[DeviceActionJob]]:
+    query = (
         db.query(DeviceActionJob)
         .options(joinedload(DeviceActionJob.items))
         .order_by(DeviceActionJob.requested_at.desc(), DeviceActionJob.id.desc())
-        .all()
     )
+    total = query.count()
+    jobs = query.offset(skip).limit(limit).all()
+    return total, jobs
 
 
 def get_device_action_job(db: Session, job_id: int) -> DeviceActionJob | None:
@@ -141,3 +143,25 @@ def get_device_action_job(db: Session, job_id: int) -> DeviceActionJob | None:
         .filter(DeviceActionJob.id == job_id)
         .first()
     )
+
+
+_CANCELLABLE_STATUSES = {
+    DeviceActionJobStatus.QUEUED.value,
+    DeviceActionJobStatus.RUNNING.value,
+}
+
+
+def cancel_device_action_job(db: Session, job_id: int) -> DeviceActionJob:
+    job = get_device_action_job(db, job_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="Device action job not found")
+    if job.status not in _CANCELLABLE_STATUSES:
+        raise HTTPException(
+            status_code=409,
+            detail=f"ジョブはキャンセルできない状態です（現在のステータス: {job.status}）",
+        )
+    job.status = DeviceActionJobStatus.CANCEL_REQUESTED.value
+    job.cancelled_at = datetime.utcnow()
+    db.commit()
+    db.refresh(job)
+    return job

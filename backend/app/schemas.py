@@ -53,6 +53,8 @@ class DeviceActionJobStatus(str, Enum):
     SUCCEEDED = "succeeded"
     FAILED = "failed"
     PARTIAL = "partial"
+    CANCEL_REQUESTED = "cancel_requested"
+    CANCELLED = "cancelled"
 
 
 class DeviceActionJobItemStatus(str, Enum):
@@ -136,6 +138,7 @@ class DeviceActionJobOut(BaseModel):
     requested_at: datetime
     started_at: Optional[datetime] = None
     finished_at: Optional[datetime] = None
+    cancelled_at: Optional[datetime] = None
     total_items: int
     queued_items: int
     succeeded_items: int
@@ -145,6 +148,11 @@ class DeviceActionJobOut(BaseModel):
     items: List[DeviceActionJobItemOut] = []
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class DeviceActionJobPage(BaseModel):
+    total: int
+    items: List[DeviceActionJobOut]
 
 class DeviceRuntimeNetworkUpdate(BaseModel):
     last_known_ip_address: IPvAnyAddress

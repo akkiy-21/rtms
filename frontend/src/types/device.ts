@@ -40,7 +40,7 @@ export interface PairingDeviceReassignmentData {
 }
 
 export type DeviceActionType = 'reboot' | 'shutdown' | 'deploy_rtms_client';
-export type DeviceActionJobStatus = 'queued' | 'running' | 'succeeded' | 'failed' | 'partial';
+export type DeviceActionJobStatus = 'queued' | 'running' | 'succeeded' | 'failed' | 'partial' | 'cancel_requested' | 'cancelled';
 export type DeviceActionJobItemStatus = 'queued' | 'running' | 'succeeded' | 'failed' | 'skipped';
 
 export interface AppRelease {
@@ -85,6 +85,7 @@ export interface DeviceActionJob {
   requested_at: string;
   started_at: string | null;
   finished_at: string | null;
+  cancelled_at: string | null;
   total_items: number;
   queued_items: number;
   succeeded_items: number;
@@ -92,6 +93,11 @@ export interface DeviceActionJob {
   skipped_items: number;
   error_message: string | null;
   items: DeviceActionJobItem[];
+}
+
+export interface DeviceActionJobPage {
+  total: number;
+  items: DeviceActionJob[];
 }
 
 export interface DeviceActionJobRequest {

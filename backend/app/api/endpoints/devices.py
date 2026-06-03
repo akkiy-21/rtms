@@ -1,14 +1,14 @@
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
 from sqlalchemy.orm import Session
 from typing import List, Union
 
 from ...auth import require_admin_user, require_authenticated_user
 from ...database import get_db
 from ...models import Users
-from ...schemas import DeviceRegistration, DeviceOut, DeviceUpdate, DeviceRuntimeNetworkInfo, DeviceRuntimeNetworkUpdate, Client, ClientAssociation, ClientCreate, EfficiencyAddress, EfficiencyAddressCreate, EfficiencyAddressUpdate, AlarmGroup, AlarmGroupCreate, AlarmGroupUpdate, AlarmGroupParseRuleSelectionUpdate, AlarmAddressParsePreview, AlarmAddressParsePreviewRequest, AlarmAddress, AlarmAddressCreate, AlarmComment, AlarmCommentCreate, LoggingSetting, LoggingSettingCreate, LoggingSettingUpdate, LoggingDataSetting, LoggingDataSettingCreate, LoggingDataSettingUpdate, QualityControlSignal, QualityControlSignalCreate, QualityControlSignalUpdate, DeviceProductAssociationResponse, DeviceProductAssociation, DeviceFullInfo, TimeTable, DeviceInfo, AppReleaseOut, DeviceActionJobOut, DeviceActionJobRequest, DeviceDeployJobRequest
+from ...schemas import DeviceRegistration, DeviceOut, DeviceUpdate, DeviceRuntimeNetworkInfo, DeviceRuntimeNetworkUpdate, Client, ClientAssociation, ClientCreate, EfficiencyAddress, EfficiencyAddressCreate, EfficiencyAddressUpdate, AlarmGroup, AlarmGroupCreate, AlarmGroupUpdate, AlarmGroupParseRuleSelectionUpdate, AlarmAddressParsePreview, AlarmAddressParsePreviewRequest, AlarmAddress, AlarmAddressCreate, AlarmComment, AlarmCommentCreate, LoggingSetting, LoggingSettingCreate, LoggingSettingUpdate, LoggingDataSetting, LoggingDataSettingCreate, LoggingDataSettingUpdate, QualityControlSignal, QualityControlSignalCreate, QualityControlSignalUpdate, DeviceProductAssociationResponse, DeviceProductAssociation, DeviceFullInfo, TimeTable, DeviceInfo, AppReleaseOut, DeviceActionJobOut, DeviceActionJobPage, DeviceActionJobRequest, DeviceDeployJobRequest
 from ...services import device_service
-from ...services.app_release_service import create_app_release, get_app_release, list_app_releases
-from ...services.device_action_service import create_deploy_job, create_device_action_job, get_device_action_job, list_device_action_jobs
+from ...services.app_release_service import create_app_release, delete_app_release, get_app_release, list_app_releases
+from ...services.device_action_service import cancel_device_action_job, create_deploy_job, create_device_action_job, get_device_action_job, list_device_action_jobs
 
 router = APIRouter(
     prefix="/devices",
@@ -46,6 +46,11 @@ async def get_release(release_id: int, db: Session = Depends(get_db)):
     return release
 
 
+@router.delete("/releases/{release_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(require_admin_user)])
+async def remove_release(release_id: int, db: Session = Depends(get_db)):
+    delete_app_release(db, release_id)
+
+
 @router.post("/actions", response_model=DeviceActionJobOut)
 async def enqueue_device_action(
     payload: DeviceActionJobRequest,
@@ -64,9 +69,14 @@ async def enqueue_deploy_action(
     return create_deploy_job(db, current_user.id, payload)
 
 
-@router.get("/actions", response_model=List[DeviceActionJobOut], dependencies=[Depends(require_admin_user)])
-async def get_device_actions(db: Session = Depends(get_db)):
-    return list_device_action_jobs(db)
+@router.get("/actions", response_model=DeviceActionJobPage, dependencies=[Depends(require_admin_user)])
+async def get_device_actions(
+    skip: int = Query(default=0, ge=0),
+    limit: int = Query(default=20, ge=1, le=100),
+    db: Session = Depends(get_db),
+):
+    total, jobs = list_device_action_jobs(db, skip=skip, limit=limit)
+    return DeviceActionJobPage(total=total, items=jobs)
 
 
 @router.get("/actions/{job_id}", response_model=DeviceActionJobOut, dependencies=[Depends(require_admin_user)])
@@ -75,6 +85,15 @@ async def get_device_action(job_id: int, db: Session = Depends(get_db)):
     if job is None:
         raise HTTPException(status_code=404, detail="Device action job not found")
     return job
+
+
+@router.post("/actions/{job_id}/cancel", response_model=DeviceActionJobOut)
+async def cancel_device_action(
+    job_id: int,
+    db: Session = Depends(get_db),
+    current_user: Users = Depends(require_admin_user),
+):
+    return cancel_device_action_job(db, job_id)
 
 @router.post("", response_model=DeviceOut, status_code=201, dependencies=[Depends(require_admin_user)])
 async def register_device(registration: DeviceRegistration, db: Session = Depends(get_db)):

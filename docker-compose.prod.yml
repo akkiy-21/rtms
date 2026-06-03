@@ -74,7 +74,7 @@ services:
     depends_on:
       - postgres
       - redis
-    command: ["celery", "-A", "app.celery_app.celery_app", "worker", "--loglevel=info", "-P", "solo"]
+    command: ["celery", "-A", "app.celery_app.celery_app", "worker", "--loglevel=info", "-P", "prefork", "-c", "4", "-Q", "device_actions,celery"]
     volumes:
       - rtms_app_storage:/app/storage
     restart: unless-stopped

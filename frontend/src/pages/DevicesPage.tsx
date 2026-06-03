@@ -23,7 +23,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useApiError } from '@/hooks/use-api-error';
 import { useToast } from '@/hooks/use-toast';
-import { createDeviceActionJob, createDeviceDeployJob, deleteDevice, getDeviceActionJob, getDevices, getTimeTables, listAppReleases } from '../services/api';
+import { cancelDeviceActionJob, createDeviceActionJob, createDeviceDeployJob, deleteDevice, getDeviceActionJob, getDevices, getTimeTables, listAppReleases } from '../services/api';
 import { AppRelease, Device, DeviceActionJob } from '../types/device';
 import { createDeviceColumns } from '@/components/features/devices/device-columns';
 import { Package, Plus, RotateCcw } from 'lucide-react';
@@ -95,8 +95,19 @@ const DevicesPage: React.FC = () => {
     }
   }, [fetchDevices]);
 
+  const handleCancelJob = async () => {
+    if (!activeJob) return;
+    try {
+      const updated = await cancelDeviceActionJob(activeJob.id);
+      setActiveJob(updated);
+      toast({ title: 'キャンセルを要求しました', description: `ジョブ #${activeJob.id} のキャンセルを受け付けました` });
+    } catch (err) {
+      handleError(err);
+    }
+  };
+
   useEffect(() => {
-    if (!activeJob || !['queued', 'running'].includes(activeJob.status)) {
+    if (!activeJob || !['queued', 'running', 'cancel_requested'].includes(activeJob.status)) {
       return;
     }
 
@@ -267,10 +278,25 @@ const DevicesPage: React.FC = () => {
       {activeJob && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">実行中ジョブ</CardTitle>
-            <CardDescription>
-              ジョブ #{activeJob.id} / {activeJob.action_type} / 状態: {activeJob.status}
-            </CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-lg">実行中ジョブ</CardTitle>
+                <CardDescription>
+                  ジョブ #{activeJob.id} / {activeJob.action_type} / 状態: {activeJob.status}
+                </CardDescription>
+              </div>
+              {['queued', 'running'].includes(activeJob.status) && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="text-destructive hover:text-destructive"
+                  onClick={handleCancelJob}
+                >
+                  キャンセル
+                </Button>
+              )}
+            </div>
           </CardHeader>
           <CardContent className="grid gap-3 md:grid-cols-5">
             <div className="rounded border p-3 text-sm">対象: {activeJob.total_items}</div>

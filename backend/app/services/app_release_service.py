@@ -94,3 +94,34 @@ def list_app_releases(db: Session) -> list[AppRelease]:
 
 def get_app_release(db: Session, release_id: int) -> AppRelease | None:
     return db.query(AppRelease).filter(AppRelease.id == release_id).first()
+
+
+def delete_app_release(db: Session, release_id: int) -> None:
+    from ..models import DeviceActionJob
+
+    release = db.query(AppRelease).filter(AppRelease.id == release_id).first()
+    if release is None:
+        raise HTTPException(status_code=404, detail="Release not found")
+
+    ref_count = (
+        db.query(DeviceActionJob)
+        .filter(DeviceActionJob.release_id == release_id)
+        .count()
+    )
+    if ref_count > 0:
+        raise HTTPException(
+            status_code=409,
+            detail=f"このリリースは {ref_count} 件のジョブで使用中のため削除できません",
+        )
+
+    storage_path = Path(release.storage_path)
+    if storage_path.exists():
+        storage_path.unlink(missing_ok=True)
+        try:
+            if storage_path.parent.exists() and not any(storage_path.parent.iterdir()):
+                storage_path.parent.rmdir()
+        except OSError:
+            pass
+
+    db.delete(release)
+    db.commit()

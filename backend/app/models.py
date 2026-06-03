@@ -48,6 +48,8 @@ class DeviceActionJobStatus(enum.Enum):
     SUCCEEDED = "succeeded"
     FAILED = "failed"
     PARTIAL = "partial"
+    CANCEL_REQUESTED = "cancel_requested"
+    CANCELLED = "cancelled"
 
 
 class DeviceActionJobItemStatus(enum.Enum):
@@ -220,6 +222,7 @@ class DeviceActionJob(Base):
     failed_items = Column(Integer, nullable=False, default=0, server_default='0')
     skipped_items = Column(Integer, nullable=False, default=0, server_default='0')
     error_message = Column(Text, nullable=True)
+    cancelled_at = Column(DateTime, nullable=True)
 
     requester = relationship("Users", back_populates="requested_device_action_jobs")
     release = relationship("AppRelease", back_populates="device_action_jobs")

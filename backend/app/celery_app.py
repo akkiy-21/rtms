@@ -20,6 +20,13 @@ celery_app.conf.update(
     result_serializer="json",
     accept_content=["json"],
     timezone="Asia/Tokyo",
+    # デバイス操作ジョブはコネクタタスクとは独立したキューで処理する。
+    # connector タスクのタイムアウト詰まりが device_action をブロックしないようにする。
+    task_routes={
+        "app.tasks.process_device_action_job": {"queue": "device_actions"},
+        "app.tasks.connector_tasks.send_connector_data": {"queue": "celery"},
+        "app.tasks.connector_tasks.check_and_dispatch_connectors": {"queue": "celery"},
+    },
     beat_schedule={
         "check-and-dispatch-connectors": {
             "task": "app.tasks.connector_tasks.check_and_dispatch_connectors",
